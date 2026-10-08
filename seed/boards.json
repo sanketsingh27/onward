@@ -1,0 +1,12 @@
+[
+  { "slug": "openai", "company_name": null, "feed_url": "https://api.ashbyhq.com/posting-api/job-board/openai", "ats": "ashby" },
+  { "slug": "airwallex", "company_name": null, "feed_url": "https://api.ashbyhq.com/posting-api/job-board/airwallex", "ats": "ashby" },
+  { "slug": "airapps", "company_name": null, "feed_url": "https://api.ashbyhq.com/posting-api/job-board/airapps", "ats": "ashby" },
+  { "slug": "lilt-production", "company_name": null, "feed_url": "https://api.ashbyhq.com/posting-api/job-board/lilt-production", "ats": "ashby" },
+  { "slug": "alpacahealth", "company_name": null, "feed_url": "https://api.ashbyhq.com/posting-api/job-board/alpacahealth", "ats": "ashby" },
+  { "slug": "neura-robotics-gmbh", "company_name": null, "feed_url": "https://api.ashbyhq.com/posting-api/job-board/neura-robotics-gmbh", "ats": "ashby" },
+  { "slug": "crusoe", "company_name": null, "feed_url": "https://api.ashbyhq.com/posting-api/job-board/crusoe", "ats": "ashby" },
+  { "slug": "snowflake", "company_name": null, "feed_url": "https://api.ashbyhq.com/posting-api/job-board/snowflake", "ats": "ashby" },
+  { "slug": "renuity", "company_name": null, "feed_url": "https://api.ashbyhq.com/posting-api/job-board/renuity", "ats": "ashby" },
+  { "slug": "bjakcareer", "company_name": null, "feed_url": "https://api.ashbyhq.com/posting-api/job-board/bjakcareer", "ats": "ashby" }
+]

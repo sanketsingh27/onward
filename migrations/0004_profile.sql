@@ -1,0 +1,5 @@
+CREATE TABLE IF NOT EXISTS profile (
+  user_id INTEGER PRIMARY KEY,
+  resume TEXT NOT NULL,
+  filters TEXT NOT NULL
+);

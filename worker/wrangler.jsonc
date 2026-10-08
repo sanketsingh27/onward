@@ -1,0 +1,19 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "onward-worker",
+  "main": "src/index.ts",
+  "compatibility_date": "2024-10-22",
+  "d1_databases": [
+    { "binding": "BOARD_DB", "database_name": "onward-boards", "database_id": "c6348804-a5ad-4ea2-8771-5db481fd7b48" },
+    { "binding": "APP_DB", "database_name": "onward-app", "database_id": "8b040283-a60d-4121-9211-836e8bc2dee7" }
+  ],
+  "ai": { "binding": "AI" },
+  "vectorize": [
+    { "binding": "VECTORIZE", "index_name": "openings" }
+  ],
+  "queues": {
+    "producers": [{ "binding": "SCAN_QUEUE", "queue": "onward-scans" }],
+    "consumers": [{ "queue": "onward-scans" }]
+  },
+  "triggers": { "crons": ["0 9 * * *"] }
+}

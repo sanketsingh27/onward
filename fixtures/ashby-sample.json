@@ -1,0 +1,83 @@
+{
+  "apiVersion": "1",
+  "jobs": [
+    {
+      "title": "Senior Software Engineer, Applied Engineering",
+      "location": "San Francisco, CA",
+      "secondaryLocations": [],
+      "department": "Engineering",
+      "team": "Applied",
+      "isListed": true,
+      "isRemote": true,
+      "workplaceType": "Remote",
+      "descriptionPlain": "Own the evaluation platform for frontier models. TypeScript, React, distributed systems.",
+      "publishedAt": "2026-09-15T16:21:55.393+00:00",
+      "employmentType": "FullTime",
+      "jobUrl": "https://jobs.ashbyhq.com/openai/1",
+      "applyUrl": "https://jobs.ashbyhq.com/openai/1/application",
+      "compensation": {
+        "compensationTierSummary": "$290K – $410K · equity",
+        "compensationTiers": [
+          {
+            "components": [
+              {
+                "compensationType": "Salary",
+                "currencyCode": "USD",
+                "interval": "1 YEAR",
+                "minValue": 290000,
+                "maxValue": 410000
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "title": "Product Manager, Developer Platform",
+      "location": "Houston, TX",
+      "secondaryLocations": [],
+      "department": "Product",
+      "team": "Growth",
+      "isListed": true,
+      "isRemote": false,
+      "workplaceType": "Hybrid",
+      "descriptionPlain": "Drive the roadmap for the developer platform and pricing.",
+      "publishedAt": "2026-09-14T10:00:00.000+00:00",
+      "employmentType": "FullTime",
+      "jobUrl": "https://jobs.ashbyhq.com/openai/2",
+      "applyUrl": "https://jobs.ashbyhq.com/openai/2/application",
+      "compensation": {
+        "compensationTierSummary": "$200K – $280K",
+        "compensationTiers": [
+          {
+            "components": [
+              {
+                "compensationType": "Salary",
+                "currencyCode": "USD",
+                "interval": "1 YEAR",
+                "minValue": 200000,
+                "maxValue": 280000
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "title": "Recruiting Coordinator",
+      "location": "San Francisco, CA",
+      "secondaryLocations": [],
+      "department": "People",
+      "team": "Recruiting",
+      "isListed": false,
+      "isRemote": false,
+      "workplaceType": "Onsite",
+      "descriptionPlain": "Coordinate interview loops.",
+      "publishedAt": "2026-09-13T09:00:00.000+00:00",
+      "employmentType": "FullTime",
+      "jobUrl": "https://jobs.ashbyhq.com/openai/3",
+      "applyUrl": "https://jobs.ashbyhq.com/openai/3/application",
+      "compensation": null
+    }
+  ]
+}

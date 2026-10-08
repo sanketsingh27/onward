@@ -1,0 +1,4 @@
+CREATE TABLE IF NOT EXISTS vectors (
+  key TEXT PRIMARY KEY,
+  vector TEXT NOT NULL
+);
