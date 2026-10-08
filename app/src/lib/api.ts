@@ -1,6 +1,6 @@
 import type { Opening, OpeningState } from './openings'
 
-const BASE = 'https://onward-worker.singhsanket27.workers.dev'
+const BASE = process.env.NEXT_PUBLIC_WORKER_URL ?? 'https://onward-worker.singhsanket27.workers.dev'
 
 function authHeaders(token: string): HeadersInit {
   return { Authorization: `Bearer ${token}` }
