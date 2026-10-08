@@ -5,3 +5,4 @@
 - **Sequence:** route-by-route (user's explicit choice), starting from "new to Cloudflare Workers". Orientation lesson first, then routes in `index.ts` order; the hard filter and the cron handler are placed where they are exercised.
 - **Quizzes:** author options near-equal length; no formatting clues; correct index deliberately varied.
 - **Mission pinned:** learn the job-matching design via the real `worker/` code. Update `MISSION.md` (and add a learning record) if the goal shifts.
+- **Scope addition:** the job-matching lessons now include the Clerk-to-Worker identity boundary because authenticated user isolation is part of the API's observable behavior; frontend material stays limited to sign-in/session flow.

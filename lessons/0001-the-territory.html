@@ -31,6 +31,7 @@
 <h2>One folder, one Worker</h2>
 <p>Everything in <code>worker/</code> deploys as a single <strong>Cloudflare Worker</strong> — a serverless function running on Cloudflare's edge network. It has no always-on server; Cloudflare invokes it on demand for HTTP requests, a daily timer, and queued jobs.</p>
 <p>The Worker's job: take a candidate's <strong>resume</strong> and a <strong>profile</strong> of preferences, then return job openings ranked by how well they match. To do that it reads from and writes to five Cloudflare services. Those connections are called <strong>bindings</strong>.</p>
+<p>Identity is a second, cross-cutting boundary. The Next.js app gates the dashboard with Clerk, and the Worker verifies a bearer session token before protected routes run; <code>GET /health</code> is the public exception. The verified Clerk subject, not a browser-provided ID, is the user key. See <a href="0013-authentication.html">lesson 13</a> for that path and its current ownership limits.</p>
 
 <figure>
 <svg viewBox="0 0 620 380" width="620" role="img" aria-labelledby="l1-title l1-desc">

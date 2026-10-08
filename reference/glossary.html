@@ -38,6 +38,14 @@
 
 <p><strong>Hono</strong>: A small web framework that maps HTTP method + path to a handler, built on the standard Fetch API. <em>Avoid:</em> Express, router.</p>
 
+<h2>Authentication &amp; identity</h2>
+
+<p><strong>Clerk session token</strong>: A signed JWT issued for a signed-in app session. The browser sends it as <code>Authorization: Bearer …</code>; the Worker verifies it before protected routes run.</p>
+
+<p><strong>JWT subject (<code>sub</code>)</strong>: The identity claim naming the authenticated Clerk user. The Worker copies the verified subject to <code>c.get('userId')</code>; clients do not choose it through a query or body field.</p>
+
+<p><strong>Authorized party (<code>azp</code>)</strong>: The token claim identifying the trusted app origin. The Worker verifies it against <code>CLERK_AUTHORIZED_PARTIES</code>.</p>
+
 <h2>Job matching</h2>
 
 <p><strong>Board</strong>: A source of job postings — one company's Ashby feed, tracked in the <code>boards</code> table.</p>

@@ -4,24 +4,71 @@ Workspace: `.`
 
 ## Changed source files
 
-- `.visual-docs/`
-- `CONTEXT.md`
+- `.visual-docs/update-report.md`
+- `ESOURCES.md`
+- `ISSION.md`
 - `MISSION.md`
 - `NOTES.md`
+- `OTES.md`
 - `PROVISIONING.md`
 - `RESOURCES.md`
-- `app/`
-- `assets/`
-- `dashboard/`
-- `docs/`
-- `fixtures/`
-- `lessons/`
-- `migrations/`
-- `reference/`
-- `seed/`
-- `test/`
+- `ROVISIONING.md`
+- `app/.gitignore`
+- `app/package-lock.json`
+- `app/package.json`
+- `app/src/app/layout.tsx`
+- `app/src/app/page.tsx`
+- `app/src/app/sign-in/`
+- `app/src/app/sign-up/`
+- `app/src/components/Dashboard.tsx`
+- `app/src/lib/api.ts`
+- `app/src/middleware.ts`
+- `docs/agent-orchestration-research.md`
+- `eference/glossary.html`
+- `eference/routes.html`
+- `essons/0001-the-territory.html`
+- `essons/0002-health-hono.html`
+- `essons/0004-openings-ranked.html`
+- `essons/0010-scan-queue.html`
+- `essons/0011-state.html`
+- `essons/0012-scheduled.html`
+- `essons/index.html`
+- `graphify-out/GRAPH_REPORT.md`
+- `graphify-out/graph.html`
+- `graphify-out/graph.json`
+- `isual-docs.json`
+- `lessons/0001-the-territory.html`
+- `lessons/0002-health-hono.html`
+- `lessons/0004-openings-ranked.html`
+- `lessons/0010-scan-queue.html`
+- `lessons/0011-state.html`
+- `lessons/0012-scheduled.html`
+- `lessons/0013-authentication.html`
+- `lessons/index.html`
+- `orker/package-lock.json`
+- `orker/package.json`
+- `orker/src/env.ts`
+- `orker/src/index.ts`
+- `orker/src/scan/scan.ts`
+- `orker/src/state/state.ts`
+- `pp/package-lock.json`
+- `pp/package.json`
+- `pp/src/app/layout.tsx`
+- `pp/src/app/page.tsx`
+- `pp/src/components/Dashboard.tsx`
+- `pp/src/lib/api.ts`
+- `reference/glossary.html`
+- `reference/routes.html`
+- `test/auth.test.ts`
+- `test/authenticated-ownership.test.ts`
 - `visual-docs.json`
-- `worker/`
+- `visual-docs/update-report.md`
+- `worker/package-lock.json`
+- `worker/package.json`
+- `worker/src/env.ts`
+- `worker/src/index.ts`
+- `worker/src/scan/scan.ts`
+- `worker/src/state/state.ts`
 
 ## Affected lessons
 
@@ -37,6 +84,7 @@ Workspace: `.`
 - **Update needed:** [POST /scan: request the whole pipeline](lessons/0010-scan-queue.html)
 - **Update needed:** [PUT /state and GET /state](lessons/0011-state.html)
 - **Update needed:** [The scheduled handler: a daily refresh](lessons/0012-scheduled.html)
+- **Update needed:** [From Clerk session to Worker identity](lessons/0013-authentication.html)
 
 ## Required agent pass
 

@@ -63,6 +63,24 @@
       "file": "lessons/0012-scheduled.html",
       "topics": ["cron", "scheduled events", "shared triggers"],
       "sourceFiles": ["worker/src/index.ts", "worker/wrangler.jsonc"]
+    },
+    {
+      "file": "lessons/0013-authentication.html",
+      "topics": ["Clerk", "session authentication", "Worker authorization", "user identity"],
+      "sourceFiles": [
+        "app/src/app/layout.tsx",
+        "app/src/app/page.tsx",
+        "app/src/middleware.ts",
+        "app/src/app/sign-in/[[...sign-in]]/page.tsx",
+        "app/src/app/sign-up/[[...sign-up]]/page.tsx",
+        "app/src/components/Dashboard.tsx",
+        "app/src/lib/api.ts",
+        "worker/src/index.ts",
+        "worker/src/env.ts",
+        "worker/src/state/state.ts",
+        "worker/src/scan/scan.ts",
+        "PROVISIONING.md"
+      ]
     }
   ]
 }

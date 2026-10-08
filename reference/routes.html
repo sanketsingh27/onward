@@ -23,6 +23,7 @@
 </div>
 
 <h2>HTTP routes</h2>
+<div class="callout"><span class="tag">Authentication</span><p><code>GET /health</code> is public. Every other HTTP route requires <code>Authorization: Bearer &lt;Clerk session JWT&gt;</code>; CORS runs before the Worker verifies the token and authorized party. User-specific reads/writes derive identity from the verified <code>sub</code>, never a query or body ID. This does not yet make <code>GET /scan/:id</code> owner-scoped. See <a href="../lessons/0013-authentication.html">the identity lesson</a>.</p></div>
 <table style="width:100%; border-collapse:collapse; font-size:0.92rem;">
 <thead>
 <tr style="text-align:left; border-bottom:1px solid var(--rule);">
@@ -53,7 +54,7 @@
 </tr>
 <tr style="border-bottom:1px solid var(--rule);">
   <td style="padding:0.55rem 0.6rem 0.55rem 0;"><code>GET /openings/ranked</code></td>
-  <td style="padding:0.55rem 0.6rem;"><code>?user=</code></td>
+  <td style="padding:0.55rem 0.6rem;">Verified session identity; no user query</td>
   <td style="padding:0.55rem 0.6rem;"><code>APP_DB</code> SELECT + state</td>
   <td style="padding:0.55rem 0 0.55rem 0.6rem;">openings, minus applied/dismissed</td>
 </tr>
@@ -65,13 +66,13 @@
 </tr>
 <tr style="border-bottom:1px solid var(--rule);">
   <td style="padding:0.55rem 0.6rem 0.55rem 0;"><code>PUT /state</code></td>
-  <td style="padding:0.55rem 0.6rem;"><code>{user_id, opening_id, status}</code></td>
+  <td style="padding:0.55rem 0.6rem;"><code>{opening_id, status}</code>; owner comes from token</td>
   <td style="padding:0.55rem 0.6rem;"><code>upsertState</code></td>
   <td style="padding:0.55rem 0 0.55rem 0.6rem;"><code>{ ok: true }</code> or 400</td>
 </tr>
 <tr style="border-bottom:1px solid var(--rule);">
   <td style="padding:0.55rem 0.6rem 0.55rem 0;"><code>GET /state</code></td>
-  <td style="padding:0.55rem 0.6rem;"><code>?user=</code></td>
+  <td style="padding:0.55rem 0.6rem;">—; user comes from token</td>
   <td style="padding:0.55rem 0.6rem;"><code>listState</code></td>
   <td style="padding:0.55rem 0 0.55rem 0.6rem;">state rows</td>
 </tr>
@@ -101,13 +102,13 @@
 </tr>
 <tr style="border-bottom:1px solid var(--rule);">
   <td style="padding:0.55rem 0.6rem 0.55rem 0;"><code>POST /scan</code></td>
-  <td style="padding:0.55rem 0.6rem;"><code>{userId?}</code></td>
+  <td style="padding:0.55rem 0.6rem;">—; user comes from token</td>
   <td style="padding:0.55rem 0.6rem;"><code>SCAN_QUEUE.send</code></td>
   <td style="padding:0.55rem 0 0.55rem 0.6rem;"><code>{ jobId }</code></td>
 </tr>
 <tr>
   <td style="padding:0.55rem 0.6rem 0.55rem 0;"><code>GET /scan/:id</code></td>
-  <td style="padding:0.55rem 0.6rem;"><code>:id</code> path param</td>
+  <td style="padding:0.55rem 0.6rem;"><code>:id</code> path param; requires session but has no owner filter</td>
   <td style="padding:0.55rem 0.6rem;"><code>APP_DB</code> scans SELECT</td>
   <td style="padding:0.55rem 0 0.55rem 0.6rem;">scan row, or <code>{error:'not found'}</code></td>
 </tr>
@@ -123,7 +124,7 @@
 </tr>
 <tr>
   <td style="padding:0.55rem 0.6rem 0.55rem 0;"><code>scheduled()</code></td>
-  <td style="padding:0.55rem 0 0.55rem 0.6rem;">Cron (<code>0 9 * * *</code>, 9am daily). Sends <code>{jobId, userId:1}</code> to the queue.</td>
+  <td style="padding:0.55rem 0 0.55rem 0.6rem;">Cron (<code>0 9 * * *</code>, 9am daily). Sends <code>{jobId, userId:'1'}</code>, a fixed legacy identity.</td>
 </tr>
 </tbody>
 </table>

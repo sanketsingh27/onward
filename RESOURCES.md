@@ -14,6 +14,13 @@
   The async job queue (`SCAN_QUEUE`). Use for: producers, the `queue()` consumer, at-least-once delivery.
 - [Docs: Hono on Cloudflare Workers](https://hono.dev/docs/getting-started/cloudflare-workers)
   The web framework for routing. Use for: `app.get`/`app.post`, `c.env`, `c.json`.
+
+- [Docs: Clerk authentication in the Next.js App Router](https://clerk.com/docs/reference/nextjs/app-router/auth)
+  Use for: `auth()` in Server Components, session state, and protecting the dashboard route.
+- [Docs: Clerk middleware for Next.js](https://clerk.com/docs/reference/nextjs/clerk-middleware)
+  Use for: initializing Clerk request context with `clerkMiddleware()`.
+- [Docs: Clerk token verification](https://clerk.com/docs/reference/backend/verify-token)
+  Use for: verifying a session JWT with a public key and restricting authorized parties.
 - [Docs: Workers AI — llama-3.1-8b-instruct-fp8](https://developers.cloudflare.com/workers-ai/models/llama-3.1-8b-instruct-fp8/)
   The LLM that writes match reasons. Use for: the `messages` input and `{ response }` output shape.
 - [Docs: Ashby Public Job Posting API](https://developers.ashbyhq.com/docs/public-job-posting-api)

@@ -32,18 +32,33 @@ npx wrangler d1 execute onward-app   --remote --file ../migrations/0002_app.sql
 npx wrangler d1 execute onward-boards --remote --file ../seed/seed.sql
 ```
 
-## 5. Seed one user (single-user for now)
-
-```bash
-npx wrangler d1 execute onward-app --remote --command "INSERT OR IGNORE INTO users (id, email, name) VALUES (1, 'sanket@example.com', 'Sanket')"
-```
-
-## 6. Deploy
+## 5. Deploy
 
 ```bash
 npx wrangler deploy
 ```
 
+
 ## Verify
 
-`curl https://onward-worker.<your-subdomain>.workers.dev/boards` should return the ten boards.
+`curl https://onward-worker.<your-subdomain>.workers.dev/health` should return `{"ok":true}` without sign-in.
+
+## Clerk authentication
+
+Create a Clerk application and enable Google as the only sign-in method in its **User & Authentication → Social connections** and **Sign-in options** settings. The sign-in page uses Clerk's hosted-instance settings; Google provider credentials and allowed redirect URLs must be configured in Clerk, not in this repository.
+
+Set these app variables in `app/.env.local`:
+
+```bash
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_...
+CLERK_SECRET_KEY=sk_...
+```
+
+Set these Worker secrets/variables before deployment:
+
+```bash
+npx wrangler secret put CLERK_JWT_KEY
+npx wrangler secret put CLERK_AUTHORIZED_PARTIES
+```
+
+Use the PEM public key from the Clerk instance's JWT key settings for `CLERK_JWT_KEY`. Set `CLERK_AUTHORIZED_PARTIES` to the comma-separated trusted app origins, for example `https://onward.example.com` (and the local development origin when needed). The Worker verifies the Clerk JWT signature and authorized party before using its `sub` as the user identity.
