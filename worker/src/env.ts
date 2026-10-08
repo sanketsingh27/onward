@@ -4,4 +4,6 @@ export type Env = {
   AI: Ai
   VECTORIZE: VectorizeIndex
   SCAN_QUEUE: Queue
+  CLERK_JWT_KEY: string
+  CLERK_AUTHORIZED_PARTIES: string
 }

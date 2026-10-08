@@ -8,6 +8,7 @@
     "start": "next start"
   },
   "dependencies": {
+    "@clerk/nextjs": "^7.9.12",
     "@phosphor-icons/react": "^2.1.7",
     "framer-motion": "^12.4.10",
     "next": "^15.1.6",

@@ -4,7 +4,7 @@ export type Status = 'saved' | 'applied' | 'dismissed'
 
 export type StateRow = {
   id: number
-  user_id: number
+  user_id: string
   opening_id: string
   status: Status
   updated_at: string
@@ -22,11 +22,11 @@ export function isValidStatus(s: string): s is Status {
   return VALID_STATUS.includes(s as Status)
 }
 
-export async function upsertState(env: Env, user_id: number, opening_id: string, status: Status): Promise<void> {
+export async function upsertState(env: Env, user_id: string, opening_id: string, status: Status): Promise<void> {
   await env.APP_DB.prepare(UPSERT_STATE).bind(user_id, opening_id, status, new Date().toISOString()).run()
 }
 
-export async function listState(env: Env, user_id: number): Promise<StateRow[]> {
+export async function listState(env: Env, user_id: string): Promise<StateRow[]> {
   const { results } = await env.APP_DB.prepare(SELECT_STATE).bind(user_id).all<StateRow>()
   return results
 }

@@ -8,7 +8,7 @@ import { fromRow, type OpeningRow } from '../ingest/normalize'
 
 export type ScanReport = { boards: number; survivors: number; ranked: number }
 
-async function loadProfile(env: Env, userId: number): Promise<{ resume: string; profile: Profile }> {
+async function loadProfile(env: Env, userId: string): Promise<{ resume: string; profile: Profile }> {
   const row = await env.APP_DB.prepare('SELECT resume, filters FROM profile WHERE user_id = ?')
     .bind(userId)
     .first<{ resume: string; filters: string }>()
@@ -23,7 +23,7 @@ export async function markScan(env: Env, id: string, status: string, detail = ''
 }
 
 // The full pipeline: ingest → hard filter → embed → score → rank.
-export async function runScan(env: Env, userId: number): Promise<ScanReport> {
+export async function runScan(env: Env, userId: string): Promise<ScanReport> {
   const { resume, profile } = await loadProfile(env, userId)
 
   const outcomes = await ingestBoards(env)

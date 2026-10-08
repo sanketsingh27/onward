@@ -1,4 +1,5 @@
 'use client'
+import { useAuth, UserButton } from '@clerk/nextjs'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { TABS, type Opening, type OpeningState, type TabId } from '@/lib/openings'
@@ -11,6 +12,7 @@ import { EmptyFiltered, EmptyIdle, ErrorBanner, Skeletons } from './States'
 type ScanStatus = 'idle' | 'loading' | 'ready'
 
 export function Dashboard() {
+  const { getToken } = useAuth()
   const [openings, setOpenings] = useState<Opening[]>([])
   const [states, setStates] = useState<Record<string, OpeningState>>({})
   const [tab, setTab] = useState<TabId>('all')
@@ -18,13 +20,15 @@ export function Dashboard() {
   const [error, setError] = useState(false)
 
   const refresh = useCallback(async () => {
-    const [list, rows] = await Promise.all([fetchOpenings(), fetchState()])
+    const token = await getToken()
+    if (!token) throw new Error('missing session token')
+    const [list, rows] = await Promise.all([fetchOpenings(token), fetchState(token)])
     setOpenings(list)
     const map: Record<string, OpeningState> = {}
     for (const r of rows) map[r.opening_id] = r.status
     setStates(map)
     setStatus(list.length ? 'ready' : 'idle')
-  }, [])
+  }, [getToken])
 
   useEffect(() => {
     refresh().catch(() => setError(true))
@@ -49,10 +53,12 @@ export function Dashboard() {
     setError(false)
     setStatus('loading')
     try {
-      const { jobId } = await startScan()
+      const token = await getToken()
+      if (!token) throw new Error('missing session token')
+      const { jobId } = await startScan(token)
       for (;;) {
         await new Promise((r) => setTimeout(r, 1500))
-        const s = await pollScan(jobId)
+        const s = await pollScan(token, jobId)
         if (s.status === 'done' || s.status === 'error') break
       }
       await refresh()
@@ -71,7 +77,9 @@ export function Dashboard() {
     })
     if (state === null) return
     try {
-      await setOpeningState(id, state)
+      const token = await getToken()
+      if (!token) throw new Error('missing session token')
+      await setOpeningState(token, id, state)
     } catch {
       setError(true)
     }
@@ -87,8 +95,9 @@ export function Dashboard() {
               <h1 className="text-xl font-semibold tracking-tight text-slate-900">Openings</h1>
               <p className="mt-0.5 text-[13px] text-slate-500">ranked by fit against your profile</p>
             </div>
-            <div className="w-full md:w-80">
+            <div className="flex w-full items-center justify-between gap-4 md:w-80">
               <CommandInput />
+              <UserButton />
             </div>
           </div>
           <div className="flex items-center gap-1 px-6 pb-3 md:px-8">
