@@ -1,4 +1,3 @@
-import type { Env } from '../env'
 
 const LLM_MODEL = '@cf/meta/llama-3.1-8b-instruct-fp8'
 

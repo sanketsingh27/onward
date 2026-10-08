@@ -1,4 +1,3 @@
-import type { Env } from '../env'
 import { fetchBoard } from './fetch'
 import { normalizeBoard, type Opening } from './normalize'
 

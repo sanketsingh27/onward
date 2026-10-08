@@ -1,4 +1,3 @@
-import type { Env } from '../env'
 
 export type Status = 'saved' | 'applied' | 'dismissed'
 

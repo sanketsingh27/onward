@@ -1,4 +1,3 @@
-import type { Env } from '../env'
 import { ingestBoards } from '../ingest/ingest'
 import { hardFilter, type Profile } from '../filter/filter'
 import { embedTexts, storeVector, UPSERT_VECTOR } from '../embed/embed'

@@ -44,4 +44,4 @@ Errors use JSON: `{ "error": "..." }`. Unexpected server errors return HTTP 500 
 
 ## Local logs
 
-From `worker/`, run `npm run dev:logs`. Wrangler starts the Worker locally and prints output in the terminal. The Worker emits one JSON request log per request plus JSON scan lifecycle events. Request logs include `requestId`, method, path, status, and duration; they do not include request bodies or authorization tokens. `--local` keeps this command independent of Cloudflare connectivity; Workers AI and Vectorize calls are unavailable in local mode.
+From `worker/`, run `npm run dev:logs`. The Worker executes locally and prints JSON request and scan lifecycle logs. Local D1 and Queue bindings are used; Workers AI and the isolated `openings-dev` Vectorize index are remote. Remote AI usage may incur Cloudflare charges. The repository-root `./dev.sh` command starts the dashboard and Worker together with the dashboard API URL set to localhost.

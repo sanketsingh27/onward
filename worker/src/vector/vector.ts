@@ -1,4 +1,3 @@
-import type { Env } from '../env'
 import { getVector } from '../embed/embed'
 
 export async function upsertVectors(env: Env, entries: { id: string; values: number[] }[]): Promise<void> {
