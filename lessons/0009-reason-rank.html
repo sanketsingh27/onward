@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Lesson 9 — /reason and /rank</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Source+Serif+4;ital,wght@0,400;0,600;1,400&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet"><link rel="stylesheet" href="../assets/course.css"></head><body><div class="wrap">
+<p class="kicker">Lesson 9 of 12 · text generation</p><h1><code>/reason</code> and <code>/rank</code>: explain the match</h1><p class="subtitle">Similarity chooses the order; an LLM turns the top matches into human-readable reasons.</p><div class="meta"><a href="../reference/glossary.html">Glossary</a><a href="../reference/routes.html">Routes</a><a href="0008-score.html">← Previous</a><span>Next → <a href="0010-scan-queue.html">/scan</a></span></div>
+<div class="callout"><span class="tag">Your win</span><p>Distinguish ranking by stored <code>fit</code> from generating a <code>reason</code>, and trace the prompt sent to the Llama model.</p></div>
+<h2><code>POST /reason</code>: one reason on demand</h2><pre><code>const body = await c.req.json&lt;{
+  resume?: string; title?: string; description?: string
+}&gt;()
+if (!body.resume || !body.title) return c.json({ error: 'missing resume or title' }, 400)
+const reason = await generateReason(c.env.AI, body.resume, body.title, body.description ?? '')
+return c.json({ reason })</code></pre><p>This route is useful as a focused operation: the caller supplies a resume and one job. It validates the two required fields, allows an empty description, and returns the generated sentence.</p>
+<h2>Prompt construction</h2><pre><code>const messages = [
+  { role: 'system', content:
+    'You write one-sentence, plain-spoken reasons a candidate matches a job. Be specific, no marketing words.' },
+  { role: 'user', content:
+    `Resume:\n${resume}\n\nJob: ${title}\n${description}\n\nOne sentence on how well this candidate matches:` },
+]
+const res = await ai.run(LLM_MODEL, { messages, max_tokens: 80 })
+return (res as { response: string }).response.trim()</code></pre><p>The system message sets the output style. The user message supplies the evidence. <code>max_tokens: 80</code> is a bounded output budget; <code>trim()</code> removes whitespace around the model response. The code treats the Workers AI response as <code>{ response: string }</code>.</p>
+<h2><code>POST /rank</code>: batch the top fit rows</h2><pre><code>const { results } = await env.APP_DB.prepare(
+  'SELECT id, title, description_plain FROM openings ORDER BY fit DESC LIMIT ?',
+).bind(topN).all()
+for (const o of results) {
+  const reason = await generateReason(env.AI, resume, o.title, o.description_plain)
+  await stmt.bind(reason, o.id).run()
+}
+return results.length</code></pre><p><code>/rank</code> does not calculate similarity. It trusts the current <code>fit</code> ordering, selects the requested top N (default 10), generates a reason for each, and persists it in <code>openings.reason</code>. The loop is sequential, so each model call finishes before the next begins.</p><div class="callout why"><span class="tag">Two kinds of truth</span><p><code>fit</code> is a numeric retrieval signal from the embedding space. <code>reason</code> is generated prose intended to help a human inspect that signal. The reason should explain the score, not silently redefine the ranking.</p></div>
+<script class="quiz-data" type="application/json">{"title":"Check yourself","questions":[{"prompt":"What decides the /rank order?","options":[{"text":"stored fit values","correct":true,"why":"The SQL orders openings by fit before any reasons are generated."},{"text":"LLM sentence quality","correct":false,"why":"The LLM runs after the order is selected."},{"text":"state status values","correct":false,"why":"State filtering belongs to /openings/ranked."}]},{"prompt":"What does the system prompt enforce?","options":[{"text":"one plain sentence","correct":true,"why":"It asks for a specific, plain-spoken, one-sentence match reason."},{"text":"a numeric fit score","correct":false,"why":"Fit comes from Vectorize, not the LLM prompt."},{"text":"a SQL query","correct":false,"why":"The prompt is sent to a text-generation model."}]},{"prompt":"What happens when title is missing?","options":[{"text":"the model guesses","correct":false,"why":"The route returns a 400 before calling the model."},{"text":"the route returns 400","correct":true,"why":"resume and title are required inputs for /reason."},{"text":"the route returns 500","correct":false,"why":"This is client validation, not an internal model error."}]}]}</script>
+<div class="source-card"><span class="tag">Primary source</span><p><a href="https://developers.cloudflare.com/workers-ai/models/llama-3.1-8b-instruct-fp8/">Cloudflare's Llama 3.1 8B Instruct FP8 documentation</a> — the model and message-based text generation API.</p></div><div class="ask"><p><strong>Ask a follow-up:</strong> ask me to critique the prompt, explain why reasons are capped to top N, or compare <code>/reason</code> with <code>/rank</code>.</p></div><div class="nav"><a class="prev" href="0008-score.html">← Lesson 8</a><a class="next" href="0010-scan-queue.html">Lesson 10: scan queue →</a></div></div><script src="../assets/quiz.js"></script></body></html>

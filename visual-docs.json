@@ -1,0 +1,68 @@
+{
+  "lessonDir": "lessons",
+  "referenceDir": "reference",
+  "index": "lessons/index.html",
+  "report": ".visual-docs/update-report.md",
+  "lessons": [
+    {
+      "file": "lessons/0001-the-territory.html",
+      "topics": ["architecture", "bindings", "pipeline"],
+      "sourceFiles": ["worker/src/index.ts", "worker/src/env.ts", "worker/wrangler.jsonc"]
+    },
+    {
+      "file": "lessons/0002-health-hono.html",
+      "topics": ["HTTP", "Hono", "middleware"],
+      "sourceFiles": ["worker/src/index.ts", "worker/package.json"]
+    },
+    {
+      "file": "lessons/0003-read-boards.html",
+      "topics": ["D1", "SQL", "configuration"],
+      "sourceFiles": ["worker/src/index.ts", "worker/src/env.ts"]
+    },
+    {
+      "file": "lessons/0004-openings-ranked.html",
+      "topics": ["Opening", "row mapping", "state-aware reads"],
+      "sourceFiles": ["worker/src/index.ts", "worker/src/ingest/normalize.ts", "worker/src/state/state.ts"]
+    },
+    {
+      "file": "lessons/0005-ingest.html",
+      "topics": ["Ashby", "normalization", "upsert"],
+      "sourceFiles": ["worker/src/index.ts", "worker/src/ingest/fetch.ts", "worker/src/ingest/normalize.ts", "worker/src/ingest/ingest.ts"]
+    },
+    {
+      "file": "lessons/0006-hard-filter.html",
+      "topics": ["profile", "hard constraints", "filtering"],
+      "sourceFiles": ["worker/src/filter/filter.ts", "worker/src/scan/scan.ts"]
+    },
+    {
+      "file": "lessons/0007-embed.html",
+      "topics": ["Workers AI", "embeddings", "vectors"],
+      "sourceFiles": ["worker/src/index.ts", "worker/src/embed/embed.ts", "worker/src/scan/scan.ts"]
+    },
+    {
+      "file": "lessons/0008-score.html",
+      "topics": ["Vectorize", "similarity", "fit"],
+      "sourceFiles": ["worker/src/index.ts", "worker/src/vector/vector.ts", "worker/src/embed/embed.ts"]
+    },
+    {
+      "file": "lessons/0009-reason-rank.html",
+      "topics": ["LLM", "prompting", "explanations"],
+      "sourceFiles": ["worker/src/index.ts", "worker/src/rank/rank.ts"]
+    },
+    {
+      "file": "lessons/0010-scan-queue.html",
+      "topics": ["Queue", "async orchestration", "scan lifecycle"],
+      "sourceFiles": ["worker/src/index.ts", "worker/src/scan/scan.ts", "worker/wrangler.jsonc"]
+    },
+    {
+      "file": "lessons/0011-state.html",
+      "topics": ["user state", "upsert", "saved/applied/dismissed"],
+      "sourceFiles": ["worker/src/index.ts", "worker/src/state/state.ts"]
+    },
+    {
+      "file": "lessons/0012-scheduled.html",
+      "topics": ["cron", "scheduled events", "shared triggers"],
+      "sourceFiles": ["worker/src/index.ts", "worker/wrangler.jsonc"]
+    }
+  ]
+}

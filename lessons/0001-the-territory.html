@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lesson 1 — The Territory — onward-worker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,wght@0,400;0,600;1,400&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/course.css">
+</head>
+<body>
+<div class="wrap">
+
+<p class="kicker">Lesson 1 of 12</p>
+<h1>The territory: what this Worker is</h1>
+<p class="subtitle">A map of the whole system before we go route by route.</p>
+
+<div class="meta">
+  <a href="../reference/glossary.html">Glossary</a>
+  <a href="../reference/routes.html">Routes</a>
+  <a href="../reference/pipeline.html">Pipeline</a>
+  <span>Next → <a href="0002-health-hono.html">/health &amp; Hono</a></span>
+</div>
+
+<div class="callout">
+  <span class="tag">Your win</span>
+  <p>By the end of this lesson you can name the five bindings in <code>wrangler.jsonc</code> and say what each one contributes to matching jobs to a candidate.</p>
+</div>
+
+<h2>One folder, one Worker</h2>
+<p>Everything in <code>worker/</code> deploys as a single <strong>Cloudflare Worker</strong> — a serverless function running on Cloudflare's edge network. It has no always-on server; Cloudflare invokes it on demand for HTTP requests, a daily timer, and queued jobs.</p>
+<p>The Worker's job: take a candidate's <strong>resume</strong> and a <strong>profile</strong> of preferences, then return job openings ranked by how well they match. To do that it reads from and writes to five Cloudflare services. Those connections are called <strong>bindings</strong>.</p>
+
+<figure>
+<svg viewBox="0 0 620 380" width="620" role="img" aria-labelledby="l1-title l1-desc">
+  <title id="l1-title">The Worker and its five bindings</title>
+  <desc id="l1-desc">A hub-and-spoke diagram: the onward-worker connects to two D1 databases, Workers AI, Vectorize, and a Queue.</desc>
+  <defs>
+    <marker id="l1-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#6f6a5f"></path>
+    </marker>
+  </defs>
+
+  <!-- worker → spine -->
+  <line class="d-arrow acc" x1="174" y1="190" x2="276" y2="190" marker-end="url(#l1-arrow)"></line>
+  <!-- spine -->
+  <line class="d-arrow" x1="280" y1="56" x2="280" y2="344"></line>
+  <!-- stubs -->
+  <line class="d-arrow" x1="280" y1="56" x2="316" y2="56" marker-end="url(#l1-arrow)"></line>
+  <line class="d-arrow" x1="280" y1="128" x2="316" y2="128" marker-end="url(#l1-arrow)"></line>
+  <line class="d-arrow" x1="280" y1="200" x2="316" y2="200" marker-end="url(#l1-arrow)"></line>
+  <line class="d-arrow" x1="280" y1="272" x2="316" y2="272" marker-end="url(#l1-arrow)"></line>
+  <line class="d-arrow" x1="280" y1="344" x2="316" y2="344" marker-end="url(#l1-arrow)"></line>
+
+  <!-- worker (focal) -->
+  <rect x="24" y="150" width="150" height="80" rx="6" fill="#f7ece5" stroke="#b03e1f"></rect>
+  <text class="d-name" x="99" y="184" text-anchor="middle">onward-worker</text>
+  <text class="d-sub" x="99" y="204" text-anchor="middle">Hono app + handlers</text>
+
+  <!-- bindings -->
+  <g>
+    <rect x="320" y="28" width="260" height="56" rx="6" fill="#ffffff" stroke="#e6e1d5"></rect>
+    <text class="d-name" x="334" y="52">BOARD_DB</text>
+    <text class="d-sub" x="334" y="70">D1 · board config</text>
+  </g>
+  <g>
+    <rect x="320" y="100" width="260" height="56" rx="6" fill="#ffffff" stroke="#e6e1d5"></rect>
+    <text class="d-name" x="334" y="124">APP_DB</text>
+    <text class="d-sub" x="334" y="142">D1 · openings &amp; state</text>
+  </g>
+  <g>
+    <rect x="320" y="172" width="260" height="56" rx="6" fill="#ffffff" stroke="#e6e1d5"></rect>
+    <text class="d-name" x="334" y="196">AI</text>
+    <text class="d-sub" x="334" y="214">Workers AI · embed + LLM</text>
+  </g>
+  <g>
+    <rect x="320" y="244" width="260" height="56" rx="6" fill="#ffffff" stroke="#e6e1d5"></rect>
+    <text class="d-name" x="334" y="268">VECTORIZE</text>
+    <text class="d-sub" x="334" y="286">Vectorize · similarity</text>
+  </g>
+  <g>
+    <rect x="320" y="316" width="260" height="56" rx="6" fill="#ffffff" stroke="#e6e1d5"></rect>
+    <text class="d-name" x="334" y="340">SCAN_QUEUE</text>
+    <text class="d-sub" x="334" y="358">Queue · async scans</text>
+  </g>
+
+  <!-- legend -->
+  <g>
+    <rect x="24" y="364" width="10" height="10" rx="2" fill="#f7ece5" stroke="#b03e1f"></rect>
+    <text class="d-sub" x="40" y="373">the worker (focal)</text>
+    <rect x="160" y="364" width="10" height="10" rx="2" fill="#ffffff" stroke="#e6e1d5"></rect>
+    <text class="d-sub" x="176" y="373">a binding</text>
+    <line class="d-arrow" x1="270" y1="369" x2="300" y2="369" marker-end="url(#l1-arrow)"></line>
+    <text class="d-sub" x="308" y="373">reads / writes</text>
+  </g>
+</svg>
+<figcaption>The five bindings, declared in <code>wrangler.jsonc</code> and typed in <code>src/env.ts</code>. In code they appear as <code>c.env.BOARD_DB</code>, <code>c.env.AI</code>, and so on.</figcaption>
+</figure>
+
+<h2>The five bindings</h2>
+<ul>
+  <li><strong><code>BOARD_DB</code></strong> (<a href="../reference/glossary.html">D1</a>) — the <em>source config</em>. A <code>boards</code> table lists each company feed to pull.</li>
+  <li><strong><code>APP_DB</code></strong> (D1) — the <em>working data</em>. Tables: <code>openings</code>, <code>vectors</code>, <code>profile</code>, <code>state</code>, <code>scans</code>.</li>
+  <li><strong><code>AI</code></strong> (<a href="../reference/glossary.html">Workers AI</a>) — one binding, two jobs: <em>embed</em> text into vectors and run an <em>LLM</em> to write reasons.</li>
+  <li><strong><code>VECTORIZE</code></strong> — the <a href="../reference/glossary.html">Vectorize</a> index that finds the openings nearest to the resume.</li>
+  <li><strong><code>SCAN_QUEUE</code></strong> — a <a href="../reference/glossary.html">Queue</a> that turns "run a full scan" into a background job instead of a slow request.</li>
+</ul>
+
+<div class="callout why">
+  <span class="tag">Why this matters</span>
+  <p>The split of <code>BOARD_DB</code> (config) from <code>APP_DB</code> (data) is a deliberate design choice: swapping a feed source never touches the openings table. You will see this separation at work in the <code>/boards</code> and <code>/ingest</code> lessons.</p>
+</div>
+
+<h2>The pipeline at a glance</h2>
+<p>Five stages turn a feed and a resume into a ranked list. Each maps to a lesson later in the course:</p>
+<ol>
+  <li><strong>Ingest</strong> — pull boards, normalize, write <code>openings</code> (<a href="0005-ingest.html">lesson 5</a>).</li>
+  <li><strong>Filter</strong> — drop openings that fail the profile (<a href="0006-hard-filter.html">lesson 6</a>).</li>
+  <li><strong>Embed</strong> — turn resume and openings into vectors (<a href="0007-embed.html">lesson 7</a>).</li>
+  <li><strong>Score</strong> — find the resume's nearest openings (<a href="0008-score.html">lesson 8</a>).</li>
+  <li><strong>Rank</strong> — write a one-line reason for the best (<a href="0009-reason-rank.html">lesson 9</a>).</li>
+</ol>
+<p>The full diagram lives in the <a href="../reference/pipeline.html">pipeline reference</a>.</p>
+
+<script class="quiz-data" type="application/json">
+{
+  "title": "Check yourself",
+  "questions": [
+    {
+      "prompt": "Which binding stores the job openings themselves?",
+      "options": [
+        { "text": "BOARD_DB", "correct": false, "why": "BOARD_DB holds the boards (feed sources), not openings." },
+        { "text": "APP_DB", "correct": true, "why": "APP_DB has the openings, vectors, profile, state, and scans tables." },
+        { "text": "VECTORIZE", "correct": false, "why": "Vectorize stores embeddings only, not the openings rows." }
+      ]
+    },
+    {
+      "prompt": "Which pipeline stage turns text into numbers?",
+      "options": [
+        { "text": "Ingest", "correct": false, "why": "Ingest fetches and normalizes, but does not make vectors." },
+        { "text": "Filter", "correct": false, "why": "Filter drops openings; it never touches vectors." },
+        { "text": "Embed", "correct": true, "why": "Embed calls Workers AI to produce a 768-number vector per text." }
+      ]
+    },
+    {
+      "prompt": "What does the AI binding do here?",
+      "options": [
+        { "text": "embed and reason", "correct": true, "why": "One binding, two models: an embedding model and an LLM for reasons." },
+        { "text": "store the vectors", "correct": false, "why": "Storing vectors is Vectorize's job, not the AI binding's." },
+        { "text": "queue the scans", "correct": false, "why": "Queueing is SCAN_QUEUE's job, not the AI binding's." }
+      ]
+    }
+  ]
+}
+</script>
+
+<div class="source-card">
+  <span class="tag">Primary source</span>
+  <p><a href="https://developers.cloudflare.com/workers/">Cloudflare Workers documentation</a> — the platform overview: what a Worker is, how it's invoked, and how bindings attach services to it.</p>
+</div>
+
+<div class="ask">
+  <p><strong>Stuck or curious?</strong> Ask me anything — e.g. "why not one database for both boards and openings?" or "what runs a Worker when nobody is calling it?" I'm your teacher; no question is too small.</p>
+</div>
+
+<div class="nav">
+  <a class="prev" href="../reference/pipeline.html">← Pipeline reference</a>
+  <a class="next" href="0002-health-hono.html">Lesson 2: /health &amp; Hono →</a>
+</div>
+
+</div>
+<script src="../assets/quiz.js"></script>
+</body>
+</html>

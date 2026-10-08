@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Glossary — onward-worker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,wght@0,400;0,600;1,400&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/course.css">
+</head>
+<body>
+<div class="wrap">
+
+<p class="kicker">Reference</p>
+<h1>Glossary</h1>
+<p class="subtitle">The canonical language for this course. Every lesson links here and uses these terms the same way.</p>
+
+<div class="meta">
+  <a href="../lessons/0001-the-territory.html">← Start at lesson 1</a>
+  <a href="routes.html">Route reference</a>
+  <a href="pipeline.html">Pipeline reference</a>
+</div>
+
+<h2>Cloudflare platform</h2>
+
+<p><strong>Worker</strong>: A serverless function running on Cloudflare's edge network that answers HTTP requests, scheduled events, and queue messages. This whole folder is one Worker. <em>Avoid:</em> lambda, server.</p>
+
+<p><strong>Binding</strong>: A named, typed connection from a Worker to a Cloudflare resource (a database, an AI model, a queue). Declared in <code>wrangler.jsonc</code>, reached in code as <code>env.&lt;NAME&gt;</code>. <em>Avoid:</em> env var, service.</p>
+
+<p><strong>D1</strong>: Cloudflare's serverless SQLite database, queried over the network. <code>BOARD_DB</code> and <code>APP_DB</code> are two D1 databases.</p>
+
+<p><strong>Workers AI</strong>: Cloudflare's hosted inference API. Runs embedding and text-generation models via <code>env.AI.run(model, input)</code>.</p>
+
+<p><strong>Vectorize</strong>: Cloudflare's vector index. Stores vectors, returns the closest matches to a query vector.</p>
+
+<p><strong>Queue</strong>: Cloudflare's asynchronous message queue. A producer <code>send</code>s a message; a <code>queue()</code> handler consumes it later.</p>
+
+<p><strong>Hono</strong>: A small web framework that maps HTTP method + path to a handler, built on the standard Fetch API. <em>Avoid:</em> Express, router.</p>
+
+<h2>Job matching</h2>
+
+<p><strong>Board</strong>: A source of job postings — one company's Ashby feed, tracked in the <code>boards</code> table.</p>
+
+<p><strong>Opening</strong>: One normalized job posting — a row in the <code>openings</code> table.</p>
+
+<p><strong>Ingest</strong>: Fetch a board's feed, normalize its jobs, write them into <code>openings</code>. The first stage of the pipeline.</p>
+
+<p><strong>Profile</strong>: A user's preferences — remote, locations, comp floor, seniority, employment type, exclude terms — stored as JSON in <code>profile.filters</code>.</p>
+
+<p><strong>Hard filter</strong>: The rule-based pass that drops openings failing a profile test (remote, location, comp, seniority, employment). Exclude-terms <em>flag</em> an opening but do not drop it.</p>
+
+<p><strong>Embedding</strong>: A fixed-length list of numbers (a vector) that stands for a text's meaning; similar texts get similar vectors.</p>
+
+<p><strong>Vector</strong>: A list of numbers — an embedding stored in or queried from Vectorize.</p>
+
+<p><strong>Cosine similarity</strong>: A −1…1 measure of how aligned two vectors are. Here it is the raw match score between the resume and an opening.</p>
+
+<p><strong>fit</strong>: The integer 0–100 on each opening, equal to <code>round(cosine_similarity × 100)</code>. Higher is a closer match.</p>
+
+<p><strong>reason</strong>: A one-sentence, LLM-written explanation of why a candidate matches an opening.</p>
+
+<p><strong>state</strong>: A per-(user, opening) status — <code>saved</code>, <code>applied</code>, or <code>dismissed</code>.</p>
+
+<div class="nav">
+  <a class="prev" href="../lessons/0001-the-territory.html">← Lesson 1</a>
+  <a class="next" href="pipeline.html">Pipeline reference →</a>
+</div>
+
+</div>
+</body>
+</html>

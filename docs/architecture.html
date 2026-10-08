@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Onward — how it works</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@400;600&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  :root { color-scheme: light; }
+  body { margin: 0; padding: 40px 24px; background: #f5f5f5; color: #2d3142; font-family: 'Geist', sans-serif; }
+  .wrap { max-width: 920px; margin: 0 auto; }
+  .eyebrow { font-family: 'Geist Mono', monospace; font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase; color: #7a8399; }
+  h1 { font-family: 'Instrument Serif', serif; font-weight: 400; font-size: 34px; margin: 8px 0 4px; letter-spacing: -0.01em; }
+  .lede { color: #4f5d75; font-size: 15px; line-height: 1.5; max-width: 60ch; margin: 0 0 28px; }
+  .figure { overflow-x: auto; }
+  svg { display: block; min-width: 920px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="eyebrow">Onward · architecture</div>
+  <h1>How Onward ranks your next job</h1>
+  <p class="lede">A scan — triggered from the dashboard or on a daily cron — flows through one Cloudflare Worker: fetch boards, hard-filter, embed, score against your resume, and write a ranked list. The dashboard then reads that list and records what you apply to.</p>
+
+  <div class="figure">
+  <svg role="img" aria-labelledby="onward-architecture-title onward-architecture-desc" viewBox="0 0 920 580" xmlns="http://www.w3.org/2000/svg">
+    <title id="onward-architecture-title">Onward architecture</title>
+    <desc id="onward-architecture-desc">System snapshot showing how Onward scans ten Ashby job boards, scores openings against a resume with embeddings, and serves a ranked list to the dashboard.</desc>
+
+    <defs>
+      <marker id="arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+        <polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/>
+      </marker>
+      <marker id="arrow-accent" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+        <polygon points="0 0, 8 3, 0 6" fill="#eb6c36"/>
+      </marker>
+      <marker id="arrow-link" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+        <polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/>
+      </marker>
+    </defs>
+
+    <rect width="100%" height="100%" fill="#f5f5f5"/>
+
+    <!-- ── arrows (drawn before boxes) ─────────────────────────────── -->
+
+    <!-- Dashboard → Queue : RUN SCAN (link) -->
+    <line x1="240" y1="92" x2="368" y2="92" stroke="#2e5aa8" stroke-width="1.2" marker-end="url(#arrow-link)"/>
+
+    <!-- Dashboard → Worker : READ · STATE (link) -->
+    <path d="M 148 120 V 156 H 340 V 248" fill="none" stroke="#2e5aa8" stroke-width="1.2" marker-end="url(#arrow-link)"/>
+
+    <!-- Queue → Worker : SCAN JOB (muted) -->
+    <line x1="460" y1="120" x2="460" y2="200" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+
+    <!-- Worker → Ashby : FETCH (link) -->
+    <line x1="340" y1="228" x2="240" y2="228" stroke="#2e5aa8" stroke-width="1.2" marker-end="url(#arrow-link)"/>
+
+    <!-- Worker → Board registry : READ BOARDS (muted) -->
+    <path d="M 340 280 V 364 H 240" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+
+    <!-- Worker → App DB : WRITE RANKED (accent) -->
+    <line x1="580" y1="236" x2="680" y2="236" stroke="#eb6c36" stroke-width="1.2" marker-end="url(#arrow-accent)"/>
+
+    <!-- Worker → Vectorize : UPSERT · QUERY (muted) -->
+    <path d="M 580 264 H 630 V 364 H 680" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+
+    <!-- Worker → AI : EMBED · REASON (muted) -->
+    <path d="M 460 288 V 396 H 772 V 452" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+
+    <!-- ── arrow labels (masks) ────────────────────────────────────── -->
+
+    <rect x="276" y="72" width="56" height="12" rx="2" fill="#f5f5f5"/>
+    <text x="304" y="81" fill="#2e5aa8" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.06em">RUN SCAN</text>
+
+    <rect x="208" y="136" width="72" height="12" rx="2" fill="#f5f5f5"/>
+    <text x="244" y="145" fill="#2e5aa8" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.06em">READ · STATE</text>
+
+    <rect x="470" y="150" width="52" height="12" rx="2" fill="#f5f5f5"/>
+    <text x="496" y="159" fill="#7a8399" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.06em">SCAN JOB</text>
+
+    <rect x="258" y="208" width="40" height="12" rx="2" fill="#f5f5f5"/>
+    <text x="278" y="217" fill="#2e5aa8" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.06em">FETCH</text>
+
+    <rect x="260" y="372" width="60" height="12" rx="2" fill="#f5f5f5"/>
+    <text x="290" y="381" fill="#7a8399" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.06em">READ BOARDS</text>
+
+    <rect x="594" y="216" width="72" height="12" rx="2" fill="#f5f5f5"/>
+    <text x="630" y="225" fill="#eb6c36" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.06em">WRITE RANKED</text>
+
+    <rect x="546" y="306" width="78" height="12" rx="2" fill="#f5f5f5"/>
+    <text x="585" y="315" fill="#7a8399" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.06em">UPSERT · QUERY</text>
+
+    <rect x="577" y="376" width="78" height="12" rx="2" fill="#f5f5f5"/>
+    <text x="616" y="385" fill="#7a8399" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.06em">EMBED · REASON</text>
+
+    <!-- ── nodes ───────────────────────────────────────────────────── -->
+
+    <!-- Dashboard (CLIENT) -->
+    <rect x="56" y="64" width="184" height="56" rx="6" fill="#f5f5f5"/>
+    <rect x="56" y="64" width="184" height="56" rx="6" fill="#f5f5f5" stroke="#2d3142" stroke-width="1"/>
+    <rect x="64" y="70" width="44" height="12" rx="2" fill="transparent" stroke="rgba(45,49,66,0.40)" stroke-width="0.8"/>
+    <text x="86" y="79" fill="rgba(45,49,66,0.80)" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">CLIENT</text>
+    <text x="148" y="98" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Dashboard</text>
+    <text x="148" y="112" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">Next.js</text>
+
+    <!-- Queue (QUEUE) -->
+    <rect x="368" y="64" width="184" height="56" rx="6" fill="#f5f5f5"/>
+    <rect x="368" y="64" width="184" height="56" rx="6" fill="#f5f5f5" stroke="#2d3142" stroke-width="1"/>
+    <rect x="376" y="70" width="40" height="12" rx="2" fill="transparent" stroke="rgba(45,49,66,0.40)" stroke-width="0.8"/>
+    <text x="396" y="79" fill="rgba(45,49,66,0.80)" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">QUEUE</text>
+    <text x="460" y="98" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Scan queue</text>
+    <text x="460" y="112" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">cron + on-demand</text>
+
+    <!-- Worker (WORKER · focal) -->
+    <rect x="300" y="200" width="240" height="88" rx="6" fill="#f5f5f5"/>
+    <rect x="300" y="200" width="240" height="88" rx="6" fill="rgba(235,108,54,0.08)" stroke="#eb6c36" stroke-width="1.2"/>
+    <rect x="308" y="206" width="48" height="12" rx="2" fill="transparent" stroke="rgba(235,108,54,0.60)" stroke-width="0.8"/>
+    <text x="332" y="215" fill="#eb6c36" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">WORKER</text>
+    <text x="420" y="238" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Worker (Hono)</text>
+    <text x="420" y="258" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">ingest · filter · embed · score · rank</text>
+
+    <!-- Ashby (SOURCE) -->
+    <rect x="56" y="200" width="184" height="56" rx="6" fill="#f5f5f5"/>
+    <rect x="56" y="200" width="184" height="56" rx="6" fill="#f5f5f5" stroke="#2d3142" stroke-width="1"/>
+    <rect x="64" y="206" width="48" height="12" rx="2" fill="transparent" stroke="rgba(45,49,66,0.40)" stroke-width="0.8"/>
+    <text x="88" y="215" fill="rgba(45,49,66,0.80)" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">SOURCE</text>
+    <text x="148" y="234" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Ashby boards</text>
+    <text x="148" y="248" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">10 boards</text>
+
+    <!-- Board registry (D1 · BOARDS) -->
+    <rect x="56" y="336" width="184" height="56" rx="6" fill="#f5f5f5"/>
+    <rect x="56" y="336" width="184" height="56" rx="6" fill="#f5f5f5" stroke="#2d3142" stroke-width="1"/>
+    <rect x="64" y="342" width="64" height="12" rx="2" fill="transparent" stroke="rgba(45,49,66,0.40)" stroke-width="0.8"/>
+    <text x="96" y="351" fill="rgba(45,49,66,0.80)" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">D1 · BOARDS</text>
+    <text x="148" y="370" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Board registry</text>
+
+    <!-- App DB (D1 · APP · focal) -->
+    <rect x="680" y="200" width="200" height="72" rx="6" fill="#f5f5f5"/>
+    <rect x="680" y="200" width="200" height="72" rx="6" fill="rgba(235,108,54,0.08)" stroke="#eb6c36" stroke-width="1.2"/>
+    <rect x="688" y="206" width="48" height="12" rx="2" fill="transparent" stroke="rgba(235,108,54,0.60)" stroke-width="0.8"/>
+    <text x="712" y="215" fill="#eb6c36" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">D1 · APP</text>
+    <text x="780" y="240" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">App DB</text>
+    <text x="780" y="260" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">openings · state · profile</text>
+
+    <!-- Vectorize (VECTOR) -->
+    <rect x="680" y="336" width="184" height="56" rx="6" fill="#f5f5f5"/>
+    <rect x="680" y="336" width="184" height="56" rx="6" fill="#f5f5f5" stroke="#2d3142" stroke-width="1"/>
+    <rect x="688" y="342" width="44" height="12" rx="2" fill="transparent" stroke="rgba(45,49,66,0.40)" stroke-width="0.8"/>
+    <text x="710" y="351" fill="rgba(45,49,66,0.80)" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">VECTOR</text>
+    <text x="772" y="370" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Vectorize</text>
+
+    <!-- Workers AI (AI) -->
+    <rect x="680" y="452" width="184" height="56" rx="6" fill="#f5f5f5"/>
+    <rect x="680" y="452" width="184" height="56" rx="6" fill="#f5f5f5" stroke="#2d3142" stroke-width="1"/>
+    <rect x="688" y="458" width="28" height="12" rx="2" fill="transparent" stroke="rgba(45,49,66,0.40)" stroke-width="0.8"/>
+    <text x="702" y="467" fill="rgba(45,49,66,0.80)" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">AI</text>
+    <text x="772" y="486" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Workers AI</text>
+
+    <!-- ── legend ───────────────────────────────────────────────────── -->
+
+    <line x1="30" y1="528" x2="890" y2="528" stroke="rgba(45,49,66,0.10)" stroke-width="0.8"/>
+    <text x="30" y="544" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" letter-spacing="0.14em">LEGEND</text>
+
+    <!-- focal node -->
+    <rect x="120" y="534" width="14" height="10" rx="2" fill="rgba(235,108,54,0.08)" stroke="#eb6c36" stroke-width="1"/>
+    <text x="142" y="542" fill="#4f5d75" font-size="9" font-family="'Geist', sans-serif">focal</text>
+
+    <!-- link arrow -->
+    <line x1="216" y1="539" x2="248" y2="539" stroke="#2e5aa8" stroke-width="1.2" marker-end="url(#arrow-link)"/>
+    <text x="258" y="542" fill="#4f5d75" font-size="9" font-family="'Geist', sans-serif">HTTP / API</text>
+
+    <!-- muted arrow -->
+    <line x1="352" y1="539" x2="384" y2="539" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+    <text x="394" y="542" fill="#4f5d75" font-size="9" font-family="'Geist', sans-serif">internal flow</text>
+
+    <!-- accent arrow -->
+    <line x1="496" y1="539" x2="528" y2="539" stroke="#eb6c36" stroke-width="1.2" marker-end="url(#arrow-accent)"/>
+    <text x="538" y="542" fill="#4f5d75" font-size="9" font-family="'Geist', sans-serif">ranked write</text>
+  </svg>
+  </div>
+</div>
+</body>
+</html>

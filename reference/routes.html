@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Route Reference — onward-worker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,wght@0,400;0,600;1,400&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/course.css">
+</head>
+<body>
+<div class="wrap">
+
+<p class="kicker">Reference</p>
+<h1>Route Reference</h1>
+<p class="subtitle">Every entry point in <code>worker/src/index.ts</code>, in file order. The cheat sheet you return to.</p>
+
+<div class="meta">
+  <a href="glossary.html">Glossary</a>
+  <a href="pipeline.html">Pipeline reference</a>
+  <a href="../lessons/0001-the-territory.html">← Start at lesson 1</a>
+</div>
+
+<h2>HTTP routes</h2>
+<table style="width:100%; border-collapse:collapse; font-size:0.92rem;">
+<thead>
+<tr style="text-align:left; border-bottom:1px solid var(--rule);">
+  <th style="padding:0.4rem 0.6rem 0.4rem 0;">Method + path</th>
+  <th style="padding:0.4rem 0.6rem;">Input</th>
+  <th style="padding:0.4rem 0.6rem;">Calls</th>
+  <th style="padding:0.4rem 0 0.4rem 0.6rem;">Returns</th>
+</tr>
+</thead>
+<tbody>
+<tr style="border-bottom:1px solid var(--rule);">
+  <td style="padding:0.55rem 0.6rem 0.55rem 0;"><code>GET /health</code></td>
+  <td style="padding:0.55rem 0.6rem;">—</td>
+  <td style="padding:0.55rem 0.6rem;">—</td>
+  <td style="padding:0.55rem 0 0.55rem 0.6rem;"><code>{ ok: true }</code></td>
+</tr>
+<tr style="border-bottom:1px solid var(--rule);">
+  <td style="padding:0.55rem 0.6rem 0.55rem 0;"><code>GET /boards</code></td>
+  <td style="padding:0.55rem 0.6rem;">—</td>
+  <td style="padding:0.55rem 0.6rem;"><code>BOARD_DB</code> SELECT</td>
+  <td style="padding:0.55rem 0 0.55rem 0.6rem;">board rows</td>
+</tr>
+<tr style="border-bottom:1px solid var(--rule);">
+  <td style="padding:0.55rem 0.6rem 0.55rem 0;"><code>GET /openings</code></td>
+  <td style="padding:0.55rem 0.6rem;">—</td>
+  <td style="padding:0.55rem 0.6rem;"><code>APP_DB</code> SELECT</td>
+  <td style="padding:0.55rem 0 0.55rem 0.6rem;">openings (fit &gt; 0, by fit)</td>
+</tr>
+<tr style="border-bottom:1px solid var(--rule);">
+  <td style="padding:0.55rem 0.6rem 0.55rem 0;"><code>GET /openings/ranked</code></td>
+  <td style="padding:0.55rem 0.6rem;"><code>?user=</code></td>
+  <td style="padding:0.55rem 0.6rem;"><code>APP_DB</code> SELECT + state</td>
+  <td style="padding:0.55rem 0 0.55rem 0.6rem;">openings, minus applied/dismissed</td>
+</tr>
+<tr style="border-bottom:1px solid var(--rule);">
+  <td style="padding:0.55rem 0.6rem 0.55rem 0;"><code>POST /ingest</code></td>
+  <td style="padding:0.55rem 0.6rem;">—</td>
+  <td style="padding:0.55rem 0.6rem;"><code>ingestBoards</code></td>
+  <td style="padding:0.55rem 0 0.55rem 0.6rem;">outcomes <code>[{board, ok, openings, error?}]</code></td>
+</tr>
+<tr style="border-bottom:1px solid var(--rule);">
+  <td style="padding:0.55rem 0.6rem 0.55rem 0;"><code>PUT /state</code></td>
+  <td style="padding:0.55rem 0.6rem;"><code>{user_id, opening_id, status}</code></td>
+  <td style="padding:0.55rem 0.6rem;"><code>upsertState</code></td>
+  <td style="padding:0.55rem 0 0.55rem 0.6rem;"><code>{ ok: true }</code> or 400</td>
+</tr>
+<tr style="border-bottom:1px solid var(--rule);">
+  <td style="padding:0.55rem 0.6rem 0.55rem 0;"><code>GET /state</code></td>
+  <td style="padding:0.55rem 0.6rem;"><code>?user=</code></td>
+  <td style="padding:0.55rem 0.6rem;"><code>listState</code></td>
+  <td style="padding:0.55rem 0 0.55rem 0.6rem;">state rows</td>
+</tr>
+<tr style="border-bottom:1px solid var(--rule);">
+  <td style="padding:0.55rem 0.6rem 0.55rem 0;"><code>POST /embed</code></td>
+  <td style="padding:0.55rem 0.6rem;"><code>{texts: string[]}</code></td>
+  <td style="padding:0.55rem 0.6rem;"><code>embedTexts</code> (Workers AI)</td>
+  <td style="padding:0.55rem 0 0.55rem 0.6rem;"><code>{ data: number[][] }</code></td>
+</tr>
+<tr style="border-bottom:1px solid var(--rule);">
+  <td style="padding:0.55rem 0.6rem 0.55rem 0;"><code>POST /score</code></td>
+  <td style="padding:0.55rem 0.6rem;">—</td>
+  <td style="padding:0.55rem 0.6rem;"><code>scoreSurvivors</code></td>
+  <td style="padding:0.55rem 0 0.55rem 0.6rem;"><code>{ scored: n }</code> or 500</td>
+</tr>
+<tr style="border-bottom:1px solid var(--rule);">
+  <td style="padding:0.55rem 0.6rem 0.55rem 0;"><code>POST /reason</code></td>
+  <td style="padding:0.55rem 0.6rem;"><code>{resume, title, description?}</code></td>
+  <td style="padding:0.55rem 0.6rem;"><code>generateReason</code> (LLM)</td>
+  <td style="padding:0.55rem 0 0.55rem 0.6rem;"><code>{ reason }</code> or 500</td>
+</tr>
+<tr style="border-bottom:1px solid var(--rule);">
+  <td style="padding:0.55rem 0.6rem 0.55rem 0;"><code>POST /rank</code></td>
+  <td style="padding:0.55rem 0.6rem;"><code>{resume, topN?}</code></td>
+  <td style="padding:0.55rem 0.6rem;"><code>rankOpenings</code></td>
+  <td style="padding:0.55rem 0 0.55rem 0.6rem;"><code>{ ranked: n }</code></td>
+</tr>
+<tr style="border-bottom:1px solid var(--rule);">
+  <td style="padding:0.55rem 0.6rem 0.55rem 0;"><code>POST /scan</code></td>
+  <td style="padding:0.55rem 0.6rem;"><code>{userId?}</code></td>
+  <td style="padding:0.55rem 0.6rem;"><code>SCAN_QUEUE.send</code></td>
+  <td style="padding:0.55rem 0 0.55rem 0.6rem;"><code>{ jobId }</code></td>
+</tr>
+<tr>
+  <td style="padding:0.55rem 0.6rem 0.55rem 0;"><code>GET /scan/:id</code></td>
+  <td style="padding:0.55rem 0.6rem;"><code>:id</code> path param</td>
+  <td style="padding:0.55rem 0.6rem;"><code>APP_DB</code> scans SELECT</td>
+  <td style="padding:0.55rem 0 0.55rem 0.6rem;">scan row, or <code>{error:'not found'}</code></td>
+</tr>
+</tbody>
+</table>
+
+<h2>Non-HTTP entry points</h2>
+<table style="width:100%; border-collapse:collapse; font-size:0.92rem;">
+<tbody>
+<tr style="border-bottom:1px solid var(--rule);">
+  <td style="padding:0.55rem 0.6rem 0.55rem 0;"><code>queue(batch)</code></td>
+  <td style="padding:0.55rem 0 0.55rem 0.6rem;">Consumer for <code>SCAN_QUEUE</code>. Marks a scan <code>running</code>, runs <code>runScan</code>, marks <code>done</code>/<code>error</code>.</td>
+</tr>
+<tr>
+  <td style="padding:0.55rem 0.6rem 0.55rem 0;"><code>scheduled()</code></td>
+  <td style="padding:0.55rem 0 0.55rem 0.6rem;">Cron (<code>0 9 * * *</code>, 9am daily). Sends <code>{jobId, userId:1}</code> to the queue.</td>
+</tr>
+</tbody>
+</table>
+
+<div class="nav">
+  <a class="prev" href="glossary.html">← Glossary</a>
+  <a class="next" href="pipeline.html">Pipeline reference →</a>
+</div>
+
+</div>
+</body>
+</html>

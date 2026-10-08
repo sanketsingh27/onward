@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pipeline Reference — onward-worker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,wght@0,400;0,600;1,400&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/course.css">
+</head>
+<body>
+<div class="wrap">
+
+<p class="kicker">Reference</p>
+<h1>Pipeline Reference</h1>
+<p class="subtitle">The five stages a candidate's resume and a list of openings flow through, and the Cloudflare service each stage leans on.</p>
+
+<div class="meta">
+  <a href="glossary.html">Glossary</a>
+  <a href="routes.html">Route reference</a>
+  <a href="../lessons/0001-the-territory.html">← Start at lesson 1</a>
+</div>
+
+<figure>
+<svg viewBox="0 0 960 240" width="960" role="img" aria-labelledby="pl-title pl-desc">
+  <title id="pl-title">Job-matching pipeline: ingest, filter, embed, score, rank</title>
+  <desc id="pl-desc">Five sequential stages that turn a board feed and a resume into a ranked list of openings with reasons, each stage annotated with its Cloudflare service.</desc>
+  <defs>
+    <marker id="pl-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#6f6a5f"></path>
+    </marker>
+  </defs>
+
+  <!-- connectors (drawn before boxes) -->
+  <line class="d-arrow" x1="176" y1="88" x2="204" y2="88" marker-end="url(#pl-arrow)"></line>
+  <line class="d-arrow" x1="360" y1="88" x2="388" y2="88" marker-end="url(#pl-arrow)"></line>
+  <line class="d-arrow" x1="544" y1="88" x2="572" y2="88" marker-end="url(#pl-arrow)"></line>
+  <line class="d-arrow" x1="728" y1="88" x2="756" y2="88" marker-end="url(#pl-arrow)"></line>
+
+  <!-- Ingest -->
+  <g>
+    <rect x="24" y="56" width="152" height="64" rx="6" fill="#ffffff" stroke="#e6e1d5"></rect>
+    <text class="d-name" x="100" y="82" text-anchor="middle">Ingest</text>
+    <text class="d-sub" x="100" y="102" text-anchor="middle">BOARD_DB · fetch</text>
+    <text class="d-sub" x="100" y="140" text-anchor="middle">→ openings</text>
+  </g>
+
+  <!-- Filter -->
+  <g>
+    <rect x="208" y="56" width="152" height="64" rx="6" fill="#ffffff" stroke="#e6e1d5"></rect>
+    <text class="d-name" x="284" y="82" text-anchor="middle">Filter</text>
+    <text class="d-sub" x="284" y="102" text-anchor="middle">APP_DB · profile</text>
+    <text class="d-sub" x="284" y="140" text-anchor="middle">→ survivors</text>
+  </g>
+
+  <!-- Embed -->
+  <g>
+    <rect x="392" y="56" width="152" height="64" rx="6" fill="#ffffff" stroke="#e6e1d5"></rect>
+    <text class="d-name" x="468" y="82" text-anchor="middle">Embed</text>
+    <text class="d-sub" x="468" y="102" text-anchor="middle">Workers AI</text>
+    <text class="d-sub" x="468" y="140" text-anchor="middle">→ vectors</text>
+  </g>
+
+  <!-- Score (focal) -->
+  <g>
+    <rect x="576" y="56" width="152" height="64" rx="6" fill="#f7ece5" stroke="#b03e1f"></rect>
+    <text class="d-name" x="652" y="82" text-anchor="middle">Score</text>
+    <text class="d-sub" x="652" y="102" text-anchor="middle">Vectorize</text>
+    <text class="d-sub" x="652" y="140" text-anchor="middle">→ fit</text>
+  </g>
+
+  <!-- Rank -->
+  <g>
+    <rect x="760" y="56" width="152" height="64" rx="6" fill="#ffffff" stroke="#e6e1d5"></rect>
+    <text class="d-name" x="836" y="82" text-anchor="middle">Rank</text>
+    <text class="d-sub" x="836" y="102" text-anchor="middle">Workers AI · LLM</text>
+    <text class="d-sub" x="836" y="140" text-anchor="middle">→ reason</text>
+  </g>
+
+  <!-- legend strip -->
+  <g>
+    <rect x="24" y="196" width="12" height="12" rx="2" fill="#ffffff" stroke="#e6e1d5"></rect>
+    <text class="d-sub" x="44" y="206">stage</text>
+    <rect x="108" y="196" width="12" height="12" rx="2" fill="#f7ece5" stroke="#b03e1f"></rect>
+    <text class="d-sub" x="128" y="206">scoring (heart of matching)</text>
+    <line class="d-arrow" x1="320" y1="202" x2="352" y2="202" marker-end="url(#pl-arrow)"></line>
+    <text class="d-sub" x="360" y="206">data handoff</text>
+  </g>
+</svg>
+<figcaption>Read left to right. Each stage's sublabel names the binding it touches; the muted line below names what it writes out. Only the scoring stage is accented — it is where a resume actually becomes a match.</figcaption>
+</figure>
+
+<h2>Stage → service → output</h2>
+<table style="width:100%; border-collapse:collapse; font-size:0.92rem;">
+<tbody>
+<tr style="border-bottom:1px solid var(--rule);"><td style="padding:0.5rem 0.6rem 0.5rem 0;"><strong>Ingest</strong></td><td style="padding:0.5rem 0.6rem;"><code>BOARD_DB</code> lists boards; <code>fetch</code> pulls each Ashby feed; <code>normalize</code> maps to <code>Opening</code>.</td><td style="padding:0.5rem 0 0.5rem 0.6rem;">rows in <code>openings</code></td></tr>
+<tr style="border-bottom:1px solid var(--rule);"><td style="padding:0.5rem 0.6rem 0.5rem 0;"><strong>Filter</strong></td><td style="padding:0.5rem 0.6rem;"><code>hardFilter</code> applies the profile's remote / location / comp / seniority / employment rules.</td><td style="padding:0.5rem 0 0.5rem 0.6rem;"><code>survivors</code></td></tr>
+<tr style="border-bottom:1px solid var(--rule);"><td style="padding:0.5rem 0.6rem 0.5rem 0;"><strong>Embed</strong></td><td style="padding:0.5rem 0.6rem;"><code>embedTexts</code> calls Workers AI <code>bge-base-en-v1.5</code>.</td><td style="padding:0.5rem 0 0.5rem 0.6rem;">one 768-d vector per text</td></tr>
+<tr style="border-bottom:1px solid var(--rule);"><td style="padding:0.5rem 0.6rem 0.5rem 0;"><strong>Score</strong></td><td style="padding:0.5rem 0.6rem;"><code>queryVector</code> finds the resume's nearest openings in Vectorize.</td><td style="padding:0.5rem 0 0.5rem 0.6rem;"><code>fit = round(cosine × 100)</code></td></tr>
+<tr><td style="padding:0.5rem 0.6rem 0.5rem 0;"><strong>Rank</strong></td><td style="padding:0.5rem 0.6rem;"><code>generateReason</code> calls Workers AI <code>llama-3.1-8b-instruct-fp8</code> for the top openings.</td><td style="padding:0.5rem 0 0.5rem 0.6rem;">one-line <code>reason</code> each</td></tr>
+</tbody>
+</table>
+
+<div class="nav">
+  <a class="prev" href="routes.html">← Route reference</a>
+  <a class="next" href="../lessons/0001-the-territory.html">Lesson 1 →</a>
+</div>
+
+</div>
+</body>
+</html>
