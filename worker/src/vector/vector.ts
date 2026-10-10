@@ -1,4 +1,5 @@
 import { getOrCreateResumeEmbedding } from '../embed/embed'
+import { replaceUserFits } from '../fit/fit'
 
 export async function upsertVectors(env: Env, entries: { id: string; values: number[] }[]): Promise<void> {
   await env.VECTORIZE.upsert(entries)
@@ -16,14 +17,20 @@ export async function scoreSurvivors(env: Env, userId: string, resumeText: strin
   const { results } = await env.APP_DB.prepare(
     'SELECT key, vector FROM vectors',
   ).all<{ key: string; vector: string }>()
-  if (results.length === 0) return 0
+  if (results.length === 0) {
+    await replaceUserFits(env, userId, [])
+    return 0
+  }
 
   const entries = results.map((r) => ({ id: r.key, values: JSON.parse(r.vector) as number[] }))
   await upsertVectors(env, entries)
 
   const matches = await queryVector(env, resume, entries.length)
-  const stmt = env.APP_DB.prepare('UPDATE openings SET fit = ? WHERE id = ?')
-  await env.APP_DB.batch(matches.map((m) => stmt.bind(Math.round(m.score * 100), m.id)))
+  const entryIds = new Set(entries.map((entry) => entry.id))
+  const fits = matches
+    .filter((match) => entryIds.has(match.id))
+    .map((match) => ({ openingId: match.id, fit: Math.round(match.score * 100) }))
+  await replaceUserFits(env, userId, fits)
 
-  return matches.length
+  return fits.length
 }

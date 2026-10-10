@@ -1,26 +1,23 @@
 import { Hono } from 'hono'
-import { fromRow, type OpeningRow } from '../ingest/normalize'
+import { fromRow, type OpeningWithFitRow } from '../ingest/normalize'
+import { OPENINGS_FOR_USER, RANKED_OPENINGS_FOR_USER } from '../fit/fit'
 import type { ApiEnv } from '../api/types'
 
 export const openingsRoutes = new Hono<ApiEnv>()
 
-// List openings with a positive fit score, ordered from highest to lowest.
+// List this user's openings with a positive Fit, ordered highest first.
 openingsRoutes.get('/openings', async (c) => {
-  const { results } = await c.env.APP_DB.prepare(
-    'SELECT * FROM openings WHERE fit > 0 ORDER BY fit DESC',
-  ).all<OpeningRow>()
-  return c.json(results.map(fromRow))
+  const { results } = await c.env.APP_DB.prepare(OPENINGS_FOR_USER)
+    .bind(c.get('userId')).all<OpeningWithFitRow>()
+  return c.json(results.map((row) => fromRow(row, row.fit)))
 })
 
-// List ranked openings, excluding openings this user applied to or dismissed.
+// List this user's ranked openings, excluding their applied or dismissed State.
 openingsRoutes.get('/openings/ranked', async (c) => {
-  const { results } = await c.env.APP_DB.prepare(
-    `SELECT o.* FROM openings o
-     WHERE o.fit > 0
-       AND o.id NOT IN (SELECT opening_id FROM state WHERE user_id = ? AND status IN ('applied','dismissed'))
-     ORDER BY o.fit DESC`,
-  ).bind(c.get('userId')).all<OpeningRow>()
-  return c.json(results.map(fromRow))
+  const userId = c.get('userId')
+  const { results } = await c.env.APP_DB.prepare(RANKED_OPENINGS_FOR_USER)
+    .bind(userId, userId).all<OpeningWithFitRow>()
+  return c.json(results.map((row) => fromRow(row, row.fit)))
 })
 
 // List tracked job boards and their feed metadata.

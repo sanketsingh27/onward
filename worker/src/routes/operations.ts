@@ -42,5 +42,5 @@ operationRoutes.post('/rank', zValidator('json', rankInputSchema, (result, c) =>
   if (!result.success) return c.json({ error: 'missing resume or invalid topN' }, 400)
 }), async (c) => {
   const { resume, topN } = c.req.valid('json')
-  return c.json({ ranked: await rankOpenings(c.env, resume, topN ?? 10) })
+  return c.json({ ranked: await rankOpenings(c.env, c.get('userId'), resume, topN ?? 10) })
 })

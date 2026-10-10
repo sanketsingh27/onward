@@ -6,8 +6,8 @@ export type BoardOutcome = { board: string; ok: boolean; openings: number; error
 const UPSERT = `INSERT OR REPLACE INTO openings
   (id, board, company, title, location, secondary_locations, remote,
    currency, salary_min, salary_max, equity_min, equity_max, bonus,
-   employment_type, published_at, apply_url, description_plain, fit, reason)
-  VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
+   employment_type, published_at, apply_url, description_plain, reason)
+  VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
 
 function rowOf(o: Opening): unknown[] {
   return [
@@ -15,8 +15,7 @@ function rowOf(o: Opening): unknown[] {
     JSON.stringify(o.secondaryLocations), o.remote,
     o.compensation.currency, o.compensation.salaryMin, o.compensation.salaryMax,
     o.compensation.equityMin ?? null, o.compensation.equityMax ?? null, o.compensation.bonus ? 1 : 0,
-    o.employmentType, o.publishedAt, o.applyUrl, o.descriptionPlain,
-    o.fit, o.reason ?? null,
+    o.employmentType, o.publishedAt, o.applyUrl, o.descriptionPlain, o.reason ?? null,
   ]
 }
 

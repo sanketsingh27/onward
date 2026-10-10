@@ -124,12 +124,13 @@ export type OpeningRow = {
   published_at: string
   apply_url: string
   description_plain: string
-  fit: number
   reason: string | null
 }
 
-// D1 rows use snake_case columns; this maps one back to the camelCase Opening.
-export function fromRow(r: OpeningRow): Opening {
+export type OpeningWithFitRow = OpeningRow & { fit: number }
+
+// D1 rows use snake_case columns; this maps them back to the camelCase Opening.
+export function fromRow(r: OpeningRow, fit = 0): Opening {
   return {
     id: r.id,
     board: r.board,
@@ -150,7 +151,7 @@ export function fromRow(r: OpeningRow): Opening {
     publishedAt: r.published_at,
     applyUrl: r.apply_url,
     descriptionPlain: r.description_plain,
-    fit: r.fit,
+    fit,
     reason: r.reason ?? undefined,
   }
 }

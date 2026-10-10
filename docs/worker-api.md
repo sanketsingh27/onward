@@ -15,8 +15,8 @@ Errors use JSON: `{ "error": "..." }`. Unexpected server errors return HTTP 500 
 
 | Method and path | Description | Success |
 | --- | --- | --- |
-| `GET /openings` | List openings with fit greater than zero, sorted by fit descending. | `200` array |
-| `GET /openings/ranked` | List ranked openings, excluding those the signed-in user applied to or dismissed. | `200` array |
+| `GET /openings` | List the signed-in user's openings with Fit greater than zero, sorted by Fit descending. | `200` array |
+| `GET /openings/ranked` | List the signed-in user's ranked openings, excluding those they applied to or dismissed. | `200` array |
 
 ## Opening state
 
@@ -38,9 +38,9 @@ Errors use JSON: `{ "error": "..." }`. Unexpected server errors return HTTP 500 
 | --- | --- | --- |
 | `POST /ingest` | Fetch and normalize postings from registered boards. | `200` ingestion outcomes |
 | `POST /embed` | Embed text. Body: `{ "texts": ["..."] }`. | `200 { "data": [...] }` |
-| `POST /score` | Recompute fit scores for eligible openings. | `200 { "scored": number }` |
+| `POST /score` | Recompute Fit for the signed-in user using their stored Resume and current Opening vectors. | `200 { "scored": number }` |
 | `POST /reason` | Generate a fit explanation. Body: `{ "resume": "...", "title": "...", "description": "..." }`; description is optional. | `200 { "reason": "..." }` |
-| `POST /rank` | Rank openings against a resume. Body: `{ "resume": "...", "topN": 10 }`; topN is optional and positive. | `200 { "ranked": number }` |
+| `POST /rank` | Generate reasons for the signed-in user's highest-Fit openings. Body: `{ "resume": "...", "topN": 10 }`; topN is optional and positive. | `200 { "ranked": number }` |
 
 ## Local logs
 

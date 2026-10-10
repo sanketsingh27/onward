@@ -1,6 +1,7 @@
 import { ingestBoards } from '../ingest/ingest'
 import { hardFilter, type Profile } from '../filter/filter'
 import { embedTexts, getOrCreateResumeEmbedding, UPSERT_VECTOR } from '../embed/embed'
+import { replaceUserFits } from '../fit/fit'
 import { queryVector, upsertVectors } from '../vector/vector'
 import { generateReason } from '../rank/rank'
 import { fromRow, type OpeningRow } from '../ingest/normalize'
@@ -28,7 +29,7 @@ export async function runScan(env: Env, userId: string): Promise<ScanReport> {
   const outcomes = await ingestBoards(env)
 
   const { results } = await env.APP_DB.prepare('SELECT * FROM openings').all<OpeningRow>()
-  const survivors = hardFilter(results.map(fromRow), profile).survivors
+  const survivors = hardFilter(results.map((row) => fromRow(row)), profile).survivors
 
   const resumeVector = await getOrCreateResumeEmbedding(env, userId, resume)
   await env.APP_DB.prepare('DELETE FROM vectors').run()
@@ -42,18 +43,23 @@ export async function runScan(env: Env, userId: string): Promise<ScanReport> {
   const matches = survivors.length > 0
     ? await queryVector(env, resumeVector, Math.min(survivors.length, 100))
     : []
-  if (matches.length > 0) {
-    const fitStmt = env.APP_DB.prepare('UPDATE openings SET fit = ? WHERE id = ?')
-    await env.APP_DB.batch(matches.map((m) => fitStmt.bind(Math.round(m.score * 100), m.id)))
-  }
+  const survivorIds = new Set(survivors.map((o) => o.id))
+  const fits = matches
+    .filter((match) => survivorIds.has(match.id))
+    .map((match) => ({ openingId: match.id, fit: Math.round(match.score * 100) }))
+  await replaceUserFits(env, userId, fits)
 
   const topN = 10
   const { results: top } = await env.APP_DB.prepare(
-    'SELECT id, title, description_plain FROM openings ORDER BY fit DESC LIMIT ?',
-  ).bind(topN).all<{ id: string; title: string; description_plain: string }>()
-  const reasonStmt = env.APP_DB.prepare('UPDATE openings SET reason = ? WHERE id = ?')
-  const reasons = await Promise.all(top.map((o) => generateReason(env.AI, resume, o.title, o.description_plain.slice(0, 2000))))
-  await env.APP_DB.batch(top.map((o, i) => reasonStmt.bind(reasons[i], o.id)))
+    `SELECT o.id, o.title, o.description_plain FROM openings o
+     JOIN user_opening_fits f ON f.opening_id = o.id
+     WHERE f.user_id = ? ORDER BY f.fit DESC LIMIT ?`,
+  ).bind(userId, topN).all<{ id: string; title: string; description_plain: string }>()
+  if (top.length > 0) {
+    const reasonStmt = env.APP_DB.prepare('UPDATE openings SET reason = ? WHERE id = ?')
+    const reasons = await Promise.all(top.map((o) => generateReason(env.AI, resume, o.title, o.description_plain.slice(0, 2000))))
+    await env.APP_DB.batch(top.map((o, i) => reasonStmt.bind(reasons[i], o.id)))
+  }
 
   return { boards: outcomes.length, survivors: survivors.length, ranked: top.length }
 }
