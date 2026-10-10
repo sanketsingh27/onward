@@ -1,6 +1,6 @@
 import { ingestBoards } from '../ingest/ingest'
 import { hardFilter, type Profile } from '../filter/filter'
-import { embedTexts, storeVector, UPSERT_VECTOR } from '../embed/embed'
+import { embedTexts, getOrCreateResumeEmbedding, UPSERT_VECTOR } from '../embed/embed'
 import { queryVector, upsertVectors } from '../vector/vector'
 import { generateReason } from '../rank/rank'
 import { fromRow, type OpeningRow } from '../ingest/normalize'
@@ -30,17 +30,21 @@ export async function runScan(env: Env, userId: string): Promise<ScanReport> {
   const { results } = await env.APP_DB.prepare('SELECT * FROM openings').all<OpeningRow>()
   const survivors = hardFilter(results.map(fromRow), profile).survivors
 
-  await env.APP_DB.prepare('DELETE FROM vectors').run()
-  const texts = [resume, ...survivors.map((o) => o.descriptionPlain.slice(0, 1200))]
-  const vectors = await embedTexts(env.AI, texts)
-  await storeVector(env, 'resume', vectors[0])
+  const resumeVector = await getOrCreateResumeEmbedding(env, userId, resume)
+  const texts = survivors.map((o) => o.descriptionPlain.slice(0, 1200))
+  const openingVectors = texts.length > 0 ? await embedTexts(env.AI, texts) : []
   const stmt = env.APP_DB.prepare(UPSERT_VECTOR)
-  await env.APP_DB.batch(survivors.map((o, i) => stmt.bind(o.id, JSON.stringify(vectors[i + 1]))))
-
-  await upsertVectors(env, survivors.map((o, i) => ({ id: o.id, values: vectors[i + 1] })))
-  const matches = await queryVector(env, vectors[0], Math.min(survivors.length, 100))
-  const fitStmt = env.APP_DB.prepare('UPDATE openings SET fit = ? WHERE id = ?')
-  await env.APP_DB.batch(matches.map((m) => fitStmt.bind(Math.round(m.score * 100), m.id)))
+  if (survivors.length > 0) {
+    await env.APP_DB.batch(survivors.map((o, i) => stmt.bind(o.id, JSON.stringify(openingVectors[i]))))
+    await upsertVectors(env, survivors.map((o, i) => ({ id: o.id, values: openingVectors[i] })))
+  }
+  const matches = survivors.length > 0
+    ? await queryVector(env, resumeVector, Math.min(survivors.length, 100))
+    : []
+  if (matches.length > 0) {
+    const fitStmt = env.APP_DB.prepare('UPDATE openings SET fit = ? WHERE id = ?')
+    await env.APP_DB.batch(matches.map((m) => fitStmt.bind(Math.round(m.score * 100), m.id)))
+  }
 
   const topN = 10
   const { results: top } = await env.APP_DB.prepare(

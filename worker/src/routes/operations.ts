@@ -17,9 +17,14 @@ operationRoutes.post('/embed', zValidator('json', embedInputSchema, (result, c) 
   if (!result.success) return c.json({ error: 'missing texts or invalid payload' }, 400)
 }), async (c) => c.json({ data: await embedTexts(c.env.AI, c.req.valid('json').texts) }))
 
-// Recompute fit scores for eligible openings.
+// Recompute fit scores against this authenticated user's Resume.
 operationRoutes.post('/score', async (c) => {
-  const scored = await scoreSurvivors(c.env)
+  const userId = c.get('userId')
+  const profile = await c.env.APP_DB.prepare('SELECT resume FROM profile WHERE user_id = ?')
+    .bind(userId)
+    .first<{ resume: string }>()
+  if (!profile) return c.json({ error: 'no profile for authenticated user' }, 404)
+  const scored = await scoreSurvivors(c.env, userId, profile.resume)
   return c.json({ scored })
 })
 

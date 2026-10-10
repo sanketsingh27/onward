@@ -13,7 +13,7 @@ test('stores and retrieves a vector by key', () => {
   const db = makeDb()
   const upsert = db.prepare(UPSERT_VECTOR)
   upsert.run('openai-1', JSON.stringify([0.1, 0.2, 0.3]))
-  upsert.run('resume', JSON.stringify([0.9, 0.8, 0.7]))
+  upsert.run('ashby-2', JSON.stringify([0.9, 0.8, 0.7]))
   const row = db.prepare(SELECT_VECTOR).get('openai-1') as { vector: string }
   assert.deepEqual(JSON.parse(row.vector), [0.1, 0.2, 0.3])
 })
