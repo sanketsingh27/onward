@@ -31,6 +31,7 @@ export async function runScan(env: Env, userId: string): Promise<ScanReport> {
   const survivors = hardFilter(results.map(fromRow), profile).survivors
 
   const resumeVector = await getOrCreateResumeEmbedding(env, userId, resume)
+  await env.APP_DB.prepare('DELETE FROM vectors').run()
   const texts = survivors.map((o) => o.descriptionPlain.slice(0, 1200))
   const openingVectors = texts.length > 0 ? await embedTexts(env.AI, texts) : []
   const stmt = env.APP_DB.prepare(UPSERT_VECTOR)
