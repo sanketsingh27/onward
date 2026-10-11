@@ -11,19 +11,3 @@ export async function generateReason(ai: Ai, resume: string, title: string, desc
   const out = res as { response: string }
   return out.response.trim()
 }
-
-// Write a one-line reason for this user's highest-Fit Openings.
-export async function rankOpenings(env: Env, userId: string, resume: string, topN: number): Promise<number> {
-  const { results } = await env.APP_DB.prepare(
-    `SELECT o.id, o.title, o.description_plain FROM openings o
-     JOIN user_opening_fits f ON f.opening_id = o.id
-     WHERE f.user_id = ? ORDER BY f.fit DESC LIMIT ?`,
-  ).bind(userId, topN).all<{ id: string; title: string; description_plain: string }>()
-
-  const stmt = env.APP_DB.prepare('UPDATE openings SET reason = ? WHERE id = ?')
-  for (const o of results) {
-    const reason = await generateReason(env.AI, resume, o.title, o.description_plain)
-    await stmt.bind(reason, o.id).run()
-  }
-  return results.length
-}

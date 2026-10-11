@@ -18,8 +18,7 @@ export type Opening = {
   publishedAt: string
   applyUrl: string
   descriptionPlain: string
-  fit: number
-  reason?: string
+  fit?: number
 }
 
 export type OpeningState = 'saved' | 'applied' | 'dismissed' | null

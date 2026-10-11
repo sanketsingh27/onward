@@ -9,27 +9,40 @@ const { privateKey, publicKey } = generateKeyPairSync('rsa', { modulusLength: 20
 
 function makeDatabase() {
   const db = new DatabaseSync(':memory:')
-  for (const file of ['0002_app.sql', '0003_vectors.sql', '0004_profile.sql', '0005_scans.sql', '0006_resume_embeddings.sql', '0007_user_opening_fits.sql']) {
+  for (const file of ['0002_app.sql', '0003_vectors.sql', '0004_profile.sql', '0005_scans.sql', '0006_resume_embeddings.sql', '0007_user_opening_fits.sql', '0008_dynamic_opening_results.sql']) {
     db.exec(readFileSync(new URL(`../migrations/${file}`, import.meta.url), 'utf8'))
   }
-  db.exec('CREATE TABLE boards (slug TEXT, company_name TEXT, feed_url TEXT)')
-  const filters = JSON.stringify({ remote: 'Remote only', locations: [], compFloorUsd: 0, compFloorInr: 0, employmentType: 'Full-time', seniority: 'Mid', excludeTerms: [] })
-  const insertProfile = db.prepare('INSERT INTO profile (user_id, resume, filters) VALUES (?,?,?)')
-  insertProfile.run('user-a', 'Resume A', filters)
-  insertProfile.run('user-b', 'Resume B', filters)
+
+  const filters = JSON.stringify({
+    remote: 'Remote only',
+    locations: [],
+    compFloorUsd: 0,
+    compFloorInr: 0,
+    employmentType: 'Full-time',
+    seniority: 'Senior+',
+    excludeTerms: [],
+  })
+  db.prepare('INSERT INTO profile (user_id, resume, filters) VALUES (?,?,?)').run('user-a', 'Resume A', filters)
+  db.prepare('INSERT INTO profile (user_id, resume, filters) VALUES (?,?,?)').run('user-b', 'Resume B', filters)
+
   const insertOpening = db.prepare(`INSERT INTO openings
     (id, board, company, title, location, secondary_locations, remote, currency,
      salary_min, salary_max, equity_min, equity_max, bonus, employment_type,
-     published_at, apply_url, description_plain, reason)
-    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
-  for (const [id, title] of [['job-a', 'Senior Software Engineer A'], ['job-b', 'Senior Software Engineer B']]) {
-    insertOpening.run(id, 'board', 'Company', title, 'Remote', '[]', 'Remote', 'USD', 0, 0, null, null, 0, 'FullTime', '', 'https://apply.test', '', null)
+     published_at, apply_url, description_plain)
+    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
+  for (const [id, title, remote] of [
+    ['opening-available', 'Senior Platform Engineer', 'Remote'],
+    ['opening-applied', 'Senior Backend Engineer', 'Remote'],
+    ['opening-dismissed', 'Senior Software Engineer', 'Remote'],
+    ['opening-onsite', 'Senior Distributed Systems Engineer', 'Onsite'],
+  ]) {
+    insertOpening.run(id, 'board', 'Company', title, 'Remote', '[]', remote, 'USD', 0, 0, null, null, 0, 'FullTime', '', 'https://apply.test', '')
   }
-  const insertFit = db.prepare('INSERT INTO user_opening_fits (user_id, opening_id, fit) VALUES (?,?,?)')
-  for (const fit of [['user-a', 'job-a', 90], ['user-a', 'job-b', 80], ['user-b', 'job-a', 50], ['user-b', 'job-b', 95]]) insertFit.run(...fit)
+
   const insertState = db.prepare('INSERT INTO state (user_id, opening_id, status, updated_at) VALUES (?,?,?,?)')
-  insertState.run('user-a', 'job-b', 'applied', 't1')
-  insertState.run('user-b', 'job-a', 'dismissed', 't1')
+  insertState.run('user-a', 'opening-applied', 'applied', '2026-01-01T00:00:00.000Z')
+  insertState.run('user-a', 'opening-dismissed', 'dismissed', '2026-01-02T00:00:00.000Z')
+
   return db
 }
 
@@ -50,9 +63,6 @@ function makeD1(db: DatabaseSync) {
         async run() { return statement.run() },
       }
     },
-    async batch(statements: Array<{ run: () => Promise<unknown> }>) {
-      return Promise.all(statements.map((statement) => statement.run()))
-    },
   }
 }
 
@@ -62,87 +72,68 @@ function token(userId: string): string {
   return `${body}.${sign('RSA-SHA256', Buffer.from(body), privateKey).toString('base64url')}`
 }
 
-test('authenticated Opening APIs return only the caller’s Fit and State-filtered ranking', async () => {
+test('Opening APIs calculate dynamic Fits for available Openings and return acted-on history', async () => {
   const db = makeDatabase()
-  const env = {
-    APP_DB: makeD1(db),
-    BOARD_DB: makeD1(db),
-    CLERK_JWT_KEY: publicKey.export({ format: 'pem', type: 'spki' }).toString(),
-    CLERK_AUTHORIZED_PARTIES: 'https://onward.test',
-  } as never
-  try {
-    for (const userId of ['user-a', 'user-b']) {
-      const response = await worker.fetch(new Request('https://onward.test/openings/ranked', {
-        headers: { Authorization: `Bearer ${token(userId)}` },
-      }), env, {} as never)
-      assert.equal(response.status, 200)
-      const openings = await response.json() as Array<{ id: string; fit: number }>
-      if (userId === 'user-a') assert.deepEqual(openings.map(({ id, fit }) => ({ id, fit })), [{ id: 'job-a', fit: 90 }])
-      else assert.deepEqual(openings.map(({ id, fit }) => ({ id, fit })), [{ id: 'job-b', fit: 95 }])
-    }
-  } finally {
-    db.close()
-  }
-})
-test('each Scan stores independent Fit for the same Openings', async () => {
-  const db = makeDatabase()
-  const openingVectors = new Map<string, number[]>()
   const env = {
     APP_DB: makeD1(db),
     BOARD_DB: makeD1(db),
     AI: {
-      run: async (_model: string, input: { text?: string[]; messages?: unknown[] }) => {
-        if (input.text) {
-          return { data: input.text.map((text) => text === 'Resume A' ? [1, 0] : text === 'Resume B' ? [0, 1] : [0.5, 0.5]) }
-        }
-        return { response: 'Relevant experience.' }
-      },
+      run: async (_model: string, input: { text: string[] }) => ({ data: input.text.map(() => [1, 0]) }),
     },
     VECTORIZE: {
-      upsert: async (entries: Array<{ id: string; values: number[] }>) => {
-        for (const entry of entries) openingVectors.set(entry.id, entry.values)
-      },
-      query: async (vector: number[], options: { topK: number }) => {
-        const scores = vector[0] === 1 ? { 'job-a': 0.92, 'job-b': 0.31 } : { 'job-a': 0.24, 'job-b': 0.95 }
-        const matches = [...openingVectors.keys()]
-          .map((id) => ({ id, score: scores[id as keyof typeof scores] }))
-          .sort((a, b) => b.score - a.score)
-          .slice(0, options.topK)
-        return { matches }
-      },
+      query: async () => ({
+        matches: [
+          { id: 'opening-applied', score: 0.99 },
+          { id: 'opening-onsite', score: 0.98 },
+          { id: 'opening-available', score: 0.91 },
+          { id: 'opening-dismissed', score: 0.90 },
+        ],
+      }),
     },
     CLERK_JWT_KEY: publicKey.export({ format: 'pem', type: 'spki' }).toString(),
     CLERK_AUTHORIZED_PARTIES: 'https://onward.test',
   } as never
+
   try {
-    await worker.queue({
-      messages: [
-        { body: { jobId: 'scan-a', userId: 'user-a' } },
-        { body: { jobId: 'scan-b', userId: 'user-b' } },
-      ],
-    } as never, env, {} as never)
-    for (const userId of ['user-a', 'user-b']) {
-      const response = await worker.fetch(new Request('https://onward.test/openings', {
-        headers: { Authorization: `Bearer ${token(userId)}` },
-      }), env, {} as never)
-      const openings = await response.json() as Array<{ id: string; fit: number }>
-      if (userId === 'user-a') assert.deepEqual(openings.map(({ id, fit }) => ({ id, fit })), [{ id: 'job-a', fit: 92 }, { id: 'job-b', fit: 31 }])
-      else assert.deepEqual(openings.map(({ id, fit }) => ({ id, fit })), [{ id: 'job-b', fit: 95 }, { id: 'job-a', fit: 24 }])
-    }
-    const contractFilters = JSON.stringify({ remote: 'Remote only', locations: [], compFloorUsd: 0, compFloorInr: 0, employmentType: 'Contract', seniority: 'Mid', excludeTerms: [] })
-    db.prepare("UPDATE profile SET filters = ? WHERE user_id = 'user-a'").run(contractFilters)
-    await worker.queue({ messages: [{ body: { jobId: 'scan-a2', userId: 'user-a' } }] } as never, env, {} as never)
-    const emptyA = await worker.fetch(new Request('https://onward.test/openings', {
+    const available = await worker.fetch(new Request('https://onward.test/openings?limit=10', {
       headers: { Authorization: `Bearer ${token('user-a')}` },
     }), env, {} as never)
-    assert.deepEqual(await emptyA.json(), [])
-    const unchangedB = await worker.fetch(new Request('https://onward.test/openings', {
-      headers: { Authorization: `Bearer ${token('user-b')}` },
+    assert.equal(available.status, 200)
+    assert.deepEqual(
+      (await available.json() as Array<{ id: string; fit: number }>).map(({ id, fit }) => ({ id, fit })),
+      [{ id: 'opening-available', fit: 91 }],
+    )
+
+    const history = await worker.fetch(new Request('https://onward.test/openings/history?limit=10', {
+      headers: { Authorization: `Bearer ${token('user-a')}` },
     }), env, {} as never)
-    const openingsB = await unchangedB.json() as Array<{ id: string; fit: number }>
-    assert.deepEqual(openingsB.map(({ id, fit }) => ({ id, fit })), [
-      { id: 'job-b', fit: 95 }, { id: 'job-a', fit: 24 },
-    ])
+    assert.equal(history.status, 200)
+    assert.deepEqual(
+      (await history.json() as { data: Array<{ id: string; state: string }>; nextCursor: string | null }).data
+        .map(({ id, state }) => ({ id, state })),
+      [
+        { id: 'opening-dismissed', state: 'dismissed' },
+        { id: 'opening-applied', state: 'applied' },
+      ],
+    )
+
+    const firstHistoryPage = await worker.fetch(new Request('https://onward.test/openings/history?limit=1', {
+      headers: { Authorization: `Bearer ${token('user-a')}` },
+    }), env, {} as never)
+    const firstHistoryBody = await firstHistoryPage.json() as { data: Array<{ id: string }>; nextCursor: string | null }
+    assert.deepEqual(firstHistoryBody.data.map(({ id }) => id), ['opening-dismissed'])
+    assert.equal(firstHistoryBody.nextCursor, '2')
+
+    const secondHistoryPage = await worker.fetch(new Request(`https://onward.test/openings/history?limit=1&cursor=${firstHistoryBody.nextCursor}`, {
+      headers: { Authorization: `Bearer ${token('user-a')}` },
+    }), env, {} as never)
+    assert.deepEqual(
+      (await secondHistoryPage.json() as { data: Array<{ id: string }> }).data.map(({ id }) => id),
+      ['opening-applied'],
+    )
+
+    assert.equal(db.prepare("SELECT COUNT(*) AS count FROM sqlite_master WHERE type = 'table' AND name = 'user_opening_fits'").get().count, 0)
+    assert.equal(db.prepare("SELECT COUNT(*) AS count FROM pragma_table_info('openings') WHERE name = 'fit'").get().count, 0)
   } finally {
     db.close()
   }

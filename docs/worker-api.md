@@ -15,8 +15,8 @@ Errors use JSON: `{ "error": "..." }`. Unexpected server errors return HTTP 500 
 
 | Method and path | Description | Success |
 | --- | --- | --- |
-| `GET /openings` | List the signed-in user's openings with Fit greater than zero, sorted by Fit descending. | `200` array |
-| `GET /openings/ranked` | List the signed-in user's ranked openings, excluding those they applied to or dismissed. | `200` array |
+| `GET /openings?limit=1..100` | Calculate and list available recommendations from the signed-in Profile's Vectorize recall. Applied and dismissed Openings are excluded; Fit is computed for this response and never stored. | `200 Opening[]` |
+| `GET /openings/history?limit=1..100&cursor=<state-id>` | List the signed-in Profile's applied and dismissed Openings, newest state first. | `200 { data: (Opening & { state })[], nextCursor: string \| null }` |
 
 ## Opening state
 
@@ -25,23 +25,13 @@ Errors use JSON: `{ "error": "..." }`. Unexpected server errors return HTTP 500 
 | `GET /state` | List the signed-in user's saved, applied, and dismissed states. | `200` array |
 | `PUT /state` | Set a state. Body: `{ "opening_id": "...", "status": "saved" | "applied" | "dismissed" }`. | `200 { "ok": true }` |
 
-## Scans
-
-| Method and path | Description | Success |
-| --- | --- | --- |
-| `POST /scan` | Queue a scan for the signed-in user. | `200 { "jobId": "..." }` |
-| `GET /scan/:id` | Get the status and detail for a scan job. | `200` scan row; `404` if not found |
 
 ## Operations
 
 | Method and path | Description | Success |
 | --- | --- | --- |
-| `POST /ingest` | Fetch and normalize postings from registered boards. | `200` ingestion outcomes |
+| `POST /ingest` | Fetch and normalize postings from registered Boards, then embed only new or changed Opening descriptions. | `200` ingestion outcomes |
 | `POST /embed` | Embed text. Body: `{ "texts": ["..."] }`. | `200 { "data": [...] }` |
-| `POST /score` | Recompute Fit for the signed-in user using their stored Resume and current Opening vectors. | `200 { "scored": number }` |
 | `POST /reason` | Generate a fit explanation. Body: `{ "resume": "...", "title": "...", "description": "..." }`; description is optional. | `200 { "reason": "..." }` |
-| `POST /rank` | Generate reasons for the signed-in user's highest-Fit openings. Body: `{ "resume": "...", "topN": 10 }`; topN is optional and positive. | `200 { "ranked": number }` |
 
-## Local logs
-
-From `worker/`, run `npm run dev:logs`. The Worker executes locally and prints JSON request and scan lifecycle logs. Local D1 and Queue bindings are used; Workers AI and the isolated `openings-dev` Vectorize index are remote. Remote AI usage may incur Cloudflare charges. The repository-root `./dev.sh` command starts the dashboard and Worker together with the dashboard API URL set to localhost.
+From `worker/`, run `npm run dev:logs`. The Worker executes locally and prints JSON request logs. Local D1 bindings are used; Workers AI and the isolated `openings-dev` Vectorize index are remote. Remote AI usage may incur Cloudflare charges. The repository-root `./dev.sh` command starts the dashboard and Worker together with the dashboard API URL set to localhost.

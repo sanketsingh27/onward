@@ -4,7 +4,6 @@ import { generateKeyPairSync, sign } from 'node:crypto'
 import worker from '../worker/src/index.ts'
 
 const { privateKey, publicKey } = generateKeyPairSync('rsa', { modulusLength: 2048 })
-const queued: unknown[] = []
 const states = {
   user_verified: [{ user_id: 'user_verified', opening_id: 'opening-private', status: 'saved' }],
   user_attacker: [{ user_id: 'user_attacker', opening_id: 'opening-other', status: 'applied' }],
@@ -13,7 +12,6 @@ const env = {
   APP_DB: {
     prepare: () => ({ bind: (id: string) => ({ all: async () => ({ results: states[id as keyof typeof states] ?? [] }), run: async () => ({ success: true }) }) }),
   },
-  SCAN_QUEUE: { send: async (message: unknown) => { queued.push(message) } },
   CLERK_JWT_KEY: publicKey.export({ format: 'pem', type: 'spki' }).toString(),
   CLERK_AUTHORIZED_PARTIES: 'https://onward.test',
 } as never
@@ -46,11 +44,4 @@ test('browser preflight permits the Authorization header required by the session
 test('a signed-in user reads State for the verified identity, not a query user ID', async () => {
   const response = await request('/state?user=user_attacker', 'user_verified')
   assert.deepEqual(await response.json(), states.user_verified)
-})
-
-test('a Scan queues the verified identity, not a body user ID', async () => {
-  queued.length = 0
-  const response = await request('/scan', 'user_verified', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userId: 987 }) })
-  assert.equal(response.status, 200)
-  assert.equal((queued[0] as { userId: string }).userId, 'user_verified')
 })

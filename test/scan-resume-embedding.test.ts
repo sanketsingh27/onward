@@ -6,8 +6,6 @@ import { getOrCreateResumeEmbedding } from '../worker/src/embed/embed.ts'
 
 function makeHarness() {
   const db = new DatabaseSync(':memory:')
-  db.exec(readFileSync(new URL('../migrations/0003_vectors.sql', import.meta.url), 'utf8'))
-  db.prepare('INSERT INTO vectors (key, vector) VALUES (?, ?)').run('resume', '[0.1,0.2]')
   db.exec(readFileSync(new URL('../migrations/0006_resume_embeddings.sql', import.meta.url), 'utf8'))
 
   let embeddingCalls = 0
@@ -38,7 +36,7 @@ function makeHarness() {
   return { db, env, get embeddingCalls() { return embeddingCalls } }
 }
 
-test('Resume embeddings are isolated per user and reused until that Resume changes', async () => {
+test('Resume embeddings are isolated per Profile and reused until that Resume changes', async () => {
   const harness = makeHarness()
   try {
     const firstA = await getOrCreateResumeEmbedding(harness.env, 'user-a', 'Resume A')
@@ -58,7 +56,6 @@ test('Resume embeddings are isolated per user and reused until that Resume chang
     assert.deepEqual(saved.map((row) => row.user_id), ['user-a', 'user-b'])
     assert.notEqual(saved[0].resume_hash, saved[1].resume_hash)
     assert.notDeepEqual(JSON.parse(saved[0].vector), JSON.parse(saved[1].vector))
-    assert.equal(harness.db.prepare("SELECT COUNT(*) AS count FROM vectors WHERE key = 'resume'").get()?.count, 0)
   } finally {
     harness.db.close()
   }

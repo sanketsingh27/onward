@@ -21,7 +21,6 @@ test('maps fields to the Opening shape', () => {
   assert.equal(swe.employmentType, 'FullTime')
   assert.equal(swe.board, 'openai')
   assert.equal(swe.company, 'openai') // company falls back to the slug
-  assert.equal(swe.fit, 0)
 })
 
 test('maps a hybrid posting', () => {

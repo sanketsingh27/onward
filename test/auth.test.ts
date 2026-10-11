@@ -21,14 +21,14 @@ async function request(path: string, init?: RequestInit): Promise<Response> {
   return worker.fetch(new Request(`https://onward.test${path}`, init), env, {} as never)
 }
 
-test('a request without a verified identity cannot read ranked Openings', async () => {
-  const response = await request('/openings/ranked')
+test('a request without a verified identity cannot read available Openings', async () => {
+  const response = await request('/openings')
 
   assert.equal(response.status, 401)
 })
 
-test('a forged bearer credential cannot read ranked Openings', async () => {
-  const response = await request('/openings/ranked', {
+test('a forged bearer credential cannot read available Openings', async () => {
+  const response = await request('/openings', {
     headers: { Authorization: 'Bearer not-a-valid-clerk-token' },
   })
 

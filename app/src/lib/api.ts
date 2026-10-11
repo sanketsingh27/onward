@@ -12,6 +12,17 @@ export async function fetchOpenings(token: string): Promise<Opening[]> {
   return (await res.json()) as Opening[]
 }
 
+export type OpeningHistoryPage = {
+  data: Array<Opening & { state: 'applied' | 'dismissed' }>
+  nextCursor: string | null
+}
+
+export async function fetchOpeningHistory(token: string): Promise<OpeningHistoryPage> {
+  const res = await fetch(`${BASE}/openings/history`, { headers: authHeaders(token) })
+  if (!res.ok) throw new Error(`opening history: ${res.status}`)
+  return (await res.json()) as OpeningHistoryPage
+}
+
 export async function fetchState(token: string): Promise<{ opening_id: string; status: OpeningState }[]> {
   const res = await fetch(`${BASE}/state`, { headers: authHeaders(token) })
   if (!res.ok) throw new Error(`state: ${res.status}`)
@@ -26,20 +37,4 @@ export async function setOpeningState(token: string, openingId: string, status: 
     body: JSON.stringify({ opening_id: openingId, status }),
   })
   if (!res.ok) throw new Error(`state: ${res.status}`)
-}
-
-export async function startScan(token: string): Promise<{ jobId: string }> {
-  const res = await fetch(`${BASE}/scan`, {
-    method: 'POST',
-    headers: { ...authHeaders(token), 'Content-Type': 'application/json' },
-    body: '{}',
-  })
-  if (!res.ok) throw new Error(`scan: ${res.status}`)
-  return (await res.json()) as { jobId: string }
-}
-
-export async function pollScan(token: string, jobId: string): Promise<{ status: string }> {
-  const res = await fetch(`${BASE}/scan/${jobId}`, { headers: authHeaders(token) })
-  if (!res.ok) throw new Error(`scan status: ${res.status}`)
-  return (await res.json()) as { status: string }
 }

@@ -13,7 +13,6 @@ Frozen interfaces every ticket codes against. **Read-only to workers** — a cha
 | Vector search | Pipeline | `src/vector/` |
 | Ranking + reason | Pipeline | `src/rank/` |
 | State | B — State | `src/state/` |
-| Scan job | Pipeline (fork) | `src/scan/` |
 | Dashboard UI | C — UI | `app/` (Next.js) |
 | Contract + fixtures | Integration owner | `docs/contract.md`, `fixtures/` |
 
@@ -25,7 +24,8 @@ users    { id INTEGER PK, email TEXT, name TEXT }
 openings { id TEXT PK, board TEXT, company TEXT, title TEXT, location TEXT, secondary_locations TEXT,
            remote TEXT, currency TEXT, salary_min INTEGER, salary_max INTEGER, equity_min REAL,
            equity_max REAL, bonus INTEGER, employment_type TEXT, published_at TEXT, apply_url TEXT,
-           description_plain TEXT, fit INTEGER, reason TEXT }
+           description_plain TEXT }
+opening_embeddings { opening_id TEXT PK, description_hash TEXT }
 state    { id INTEGER PK, user_id INTEGER, opening_id TEXT, status TEXT, updated_at TEXT }
          -- status ∈ saved | applied | dismissed
 ```
@@ -40,8 +40,10 @@ type Opening = {
   compensation: { currency: string; salaryMin: number; salaryMax: number; equityMin?: number; equityMax?: number; bonus?: boolean };
   employmentType: 'FullTime' | 'Contract';
   publishedAt: string; applyUrl: string; descriptionPlain: string;
-  fit: number;            // 0–100, written by vector search
-  reason?: string;        // top-N only, written by ranking
+};
+
+type RankedOpening = Opening & {
+  fit: number;            // 0–100, calculated for the response
 };
 ```
 
@@ -49,19 +51,19 @@ type Opening = {
 
 - Index `openings`, **768 dimensions**, cosine.
 - Embedding model: Workers AI `@cf/baai/bge-base-en-v1.5`.
-- One vector for the resume; one vector per survivor's `descriptionPlain`.
+- One vector per Opening description, updated only when its embedded text changes.
+- One cached Resume vector per Profile Resume version.
+- Fit is calculated by the `GET /openings` query and is never persisted.
 
 ## API routes
 
 ```
-GET  /boards                 -> Board[]
-GET  /openings               -> Opening[]   (ingested, no fit)
-GET  /survivors              -> Opening[]   (post hard-filter, pre-rank)
-GET  /openings/ranked        -> Opening[]   (fit + rank + reason, acted-on excluded)
-POST /scan                   -> 202 { jobId }
-GET  /scan/{id}              -> { status: pending|running|done|error }
-GET  /state?user={id}        -> state rows
-PUT  /state { user_id, opening_id, status } -> state row
+GET  /boards                                      -> Board[]
+GET  /openings?limit=1..100                       -> RankedOpening[] (available only)
+GET  /openings/history?limit=1..100&cursor=<id>   -> { data: HistoryOpening[], nextCursor }
+GET  /state                                       -> state rows
+PUT  /state { opening_id, status }                -> { ok: true }
+POST /ingest                                      -> BoardOutcome[]
 ```
 
 ## Fixtures (committed, used by every ticket's tests)

@@ -32,22 +32,22 @@ function Select({ value, options }: { value: string; options: string[] }) {
   )
 }
 
-function StatusDot({ scanning }: { scanning: boolean }) {
+function StatusDot({ loading }: { loading: boolean }) {
   return (
     <span className="relative flex h-2 w-2">
-      {scanning && (
+      {loading && (
         <motion.span
           animate={{ scale: [1, 2.4], opacity: [0.6, 0] }}
           transition={{ duration: 1.4, repeat: Infinity, ease: 'easeOut' }}
           className="absolute inset-0 rounded-full bg-emerald-500"
         />
       )}
-      <span className={`relative h-2 w-2 rounded-full ${scanning ? 'bg-emerald-500' : 'bg-slate-300'}`} />
+      <span className={`relative h-2 w-2 rounded-full ${loading ? 'bg-emerald-500' : 'bg-slate-300'}`} />
     </span>
   )
 }
 
-export function Sidebar({ scanning, onScan }: { scanning: boolean; onScan: () => void }) {
+export function Sidebar({ loading, onRefresh }: { loading: boolean; onRefresh: () => void }) {
   return (
     <aside className="flex w-full shrink-0 flex-col border-b border-slate-200 bg-white lg:min-h-[100dvh] lg:w-80 lg:border-b-0 lg:border-r">
       <div className="flex items-center gap-2.5 px-6 pt-6">
@@ -88,15 +88,15 @@ export function Sidebar({ scanning, onScan }: { scanning: boolean; onScan: () =>
 
       <div className="mt-auto border-t border-slate-200 px-6 py-5">
         <MagneticButton
-          onClick={onScan}
+          onClick={onRefresh}
           className="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-emerald-700"
         >
-          {scanning ? 'Scanning…' : 'Run scan'}
-          <ArrowRight size={15} weight="bold" className={scanning ? 'opacity-0' : ''} />
+          {loading ? 'Loading…' : 'Refresh recommendations'}
+          <ArrowRight size={15} weight="bold" className={loading ? 'opacity-0' : ''} />
         </MagneticButton>
         <div className="mt-4 flex items-center gap-2 text-[12px] text-slate-500">
-          <StatusDot scanning={scanning} />
-          10 boards · 7,162 openings
+          <StatusDot loading={loading} />
+          Current recommendations
         </div>
       </div>
     </aside>

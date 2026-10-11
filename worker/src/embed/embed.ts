@@ -8,9 +8,6 @@ export async function embedTexts(ai: Ai, texts: string[]): Promise<number[][]> {
   return output.data
 }
 
-export const UPSERT_VECTOR = `INSERT INTO vectors (key, vector) VALUES (?,?)
-  ON CONFLICT(key) DO UPDATE SET vector=excluded.vector`
-export const SELECT_VECTOR = `SELECT vector FROM vectors WHERE key = ?`
 
 export async function getOrCreateResumeEmbedding(env: Env, userId: string, resume: string): Promise<number[]> {
   const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(resume))

@@ -66,17 +66,16 @@ export function JobRow({
         </div>
       </div>
 
-      <div className="col-span-12 lg:col-span-4">
-        <div className="flex items-end gap-2">
-          <span className="text-3xl font-semibold tracking-tight text-emerald-600 tabular-nums">{opening.fit}</span>
-          <span className="pb-1 text-[12px] text-slate-400">/100 fit</span>
+      {opening.fit !== undefined && (
+        <div className="col-span-12 lg:col-span-4">
+          <div className="flex items-end gap-2">
+            <span className="text-3xl font-semibold tracking-tight text-emerald-600 tabular-nums">{opening.fit}</span>
+            <span className="pb-1 text-[12px] text-slate-400">/100 fit</span>
+          </div>
         </div>
-      </div>
+      )}
 
       <div className="col-span-12 flex items-center justify-between gap-4 lg:col-span-3 lg:flex-col lg:items-end">
-        {opening.reason && (
-          <p className="max-w-[34ch] text-[13px] leading-relaxed text-slate-500 lg:text-right">{opening.reason}</p>
-        )}
         <div className="flex items-center gap-2">
           <a
             href={opening.applyUrl}

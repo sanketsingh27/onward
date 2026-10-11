@@ -10,8 +10,6 @@
   The vector index the worker queries for similarity. Use for: `upsert`/`query`, the cosine metric, `topK`.
 - [Docs: Cloudflare D1](https://developers.cloudflare.com/d1/)
   SQLite at the edge (`BOARD_DB`, `APP_DB`). Use for: `prepare`/`bind`/`all`/`batch` and the Worker database API.
-- [Docs: Cloudflare Queues](https://developers.cloudflare.com/queues/)
-  The async job queue (`SCAN_QUEUE`). Use for: producers, the `queue()` consumer, at-least-once delivery.
 - [Docs: Hono on Cloudflare Workers](https://hono.dev/docs/getting-started/cloudflare-workers)
   The web framework for routing. Use for: `app.get`/`app.post`, `c.env`, `c.json`.
 

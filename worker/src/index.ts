@@ -4,9 +4,7 @@ import { cors } from 'hono/cors'
 import type { ApiEnv } from './api/types'
 import { openingsRoutes } from './routes/openings'
 import { operationRoutes } from './routes/operations'
-import { scanRoutes } from './routes/scans'
 import { stateRoutes } from './routes/state'
-import { markScan, runScan } from './scan/scan'
 
 const app = new Hono<ApiEnv>()
 app.use('*', cors())
@@ -65,30 +63,8 @@ app.use('*', async (c, next) => {
 app.get('/health', (c) => c.json({ ok: true }))
 app.route('/', openingsRoutes)
 app.route('/', stateRoutes)
-app.route('/', scanRoutes)
 app.route('/', operationRoutes)
 
 export default {
   fetch: app.fetch,
-  async queue(batch: MessageBatch<{ jobId: string; userId: string }>, env: Env) {
-    for (const msg of batch.messages) {
-      const { jobId, userId } = msg.body
-      console.log(JSON.stringify({ event: 'scan_started', entryPoint: 'queue', jobId }))
-      await markScan(env, jobId, 'running')
-      try {
-        const report = await runScan(env, userId)
-        await markScan(env, jobId, 'done', JSON.stringify(report))
-        console.log(JSON.stringify({ event: 'scan_completed', entryPoint: 'queue', jobId, ...report }))
-      } catch (error) {
-        const detail = error instanceof Error ? error.message : String(error)
-        await markScan(env, jobId, 'error', detail)
-        console.error(JSON.stringify({ event: 'scan_failed', entryPoint: 'queue', jobId, error: detail }))
-      }
-    }
-  },
-  async scheduled(_controller: ScheduledController, env: Env) {
-    const jobId = crypto.randomUUID()
-    await env.SCAN_QUEUE.send({ jobId, userId: '1' })
-    console.log(JSON.stringify({ event: 'scan_queued', entryPoint: 'scheduler', jobId }))
-  },
 }

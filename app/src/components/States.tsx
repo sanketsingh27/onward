@@ -1,14 +1,13 @@
 'use client'
 import { motion } from 'framer-motion'
-import { ArrowRight, Crosshair, WarningCircle, X } from '@phosphor-icons/react'
-import { MagneticButton } from './MagneticButton'
+import { Crosshair, WarningCircle, X } from '@phosphor-icons/react'
 import type { TabId } from '@/lib/openings'
 
 const EMPTY_COPY: Record<TabId, { title: string; body: string }> = {
-  all: { title: 'No openings matched', body: 'Loosen a hard filter — remote, location, or comp floor — and re-scan.' },
+  all: { title: 'No current recommendations', body: 'Update your profile or refresh recommendations to see the latest matches.' },
   saved: { title: 'Nothing saved yet', body: 'Bookmark the openings worth a second look and they will collect here.' },
-  applied: { title: 'Nothing applied yet', body: 'Once you apply, mark it here so it stops surfacing on future scans.' },
-  dismissed: { title: 'Nothing dismissed', body: 'Dismissed openings are hidden from future scans but kept here for the record.' },
+  applied: { title: 'Nothing applied yet', body: 'Applied openings remain here for your record.' },
+  dismissed: { title: 'Nothing dismissed', body: 'Dismissed openings remain here for your record.' },
 }
 
 export function Skeletons({ count = 5 }: { count?: number }) {
@@ -39,31 +38,6 @@ export function Skeletons({ count = 5 }: { count?: number }) {
   )
 }
 
-export function EmptyIdle({ onScan }: { onScan: () => void }) {
-  return (
-    <div className="flex flex-col items-center justify-center px-6 py-28 text-center">
-      <motion.div
-        initial={{ scale: 0.9, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        transition={{ type: 'spring', stiffness: 120, damping: 16 }}
-        className="grid h-14 w-14 place-items-center rounded-2xl border border-slate-200 bg-white shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
-      >
-        <Crosshair size={26} weight="duotone" className="text-emerald-600" />
-      </motion.div>
-      <h2 className="mt-6 text-lg font-semibold tracking-tight text-slate-900">No openings yet</h2>
-      <p className="mt-2 max-w-[36ch] text-sm leading-relaxed text-slate-500">
-        Run a scan across your boards. Onward hard-filters the list, then ranks the survivors against your profile.
-      </p>
-      <MagneticButton
-        onClick={onScan}
-        className="mt-7 inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-emerald-700"
-      >
-        Run first scan
-        <ArrowRight size={15} weight="bold" />
-      </MagneticButton>
-    </div>
-  )
-}
 
 export function EmptyFiltered({ tab }: { tab: TabId }) {
   const copy = EMPTY_COPY[tab]
@@ -83,7 +57,7 @@ export function ErrorBanner({ onDismiss }: { onDismiss: () => void }) {
     <div className="mx-6 mt-6 flex items-start gap-3 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 md:mx-8">
       <WarningCircle size={18} weight="fill" className="mt-0.5 shrink-0 text-rose-500" />
       <p className="flex-1 text-[13px] leading-relaxed text-rose-700">
-        The Ashby feed for <span className="font-medium">bjakcareer</span> timed out. Re-scan to retry — the other nine boards are unaffected.
+        Recommendations could not be loaded. Refresh to retry.
       </p>
       <button onClick={onDismiss} className="shrink-0 text-rose-400 transition-colors hover:text-rose-600" aria-label="Dismiss">
         <X size={16} weight="bold" />

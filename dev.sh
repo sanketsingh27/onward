@@ -25,7 +25,7 @@ run_wrangler() {
 
 # Bootstrap local D1 databases only; never pass --remote here.
 run_wrangler d1 execute onward-boards --local --file "$ROOT_DIR/migrations/0001_boards.sql"
-for migration in 0002_app.sql 0003_vectors.sql 0004_profile.sql 0005_scans.sql 0006_resume_embeddings.sql 0007_user_opening_fits.sql; do
+for migration in 0002_app.sql 0003_vectors.sql 0004_profile.sql 0005_scans.sql 0006_resume_embeddings.sql 0007_user_opening_fits.sql 0008_dynamic_opening_results.sql; do
   run_wrangler d1 execute onward-app --local --file "$ROOT_DIR/migrations/$migration"
 done
 run_wrangler d1 execute onward-boards --local --file "$ROOT_DIR/seed/seed.sql"

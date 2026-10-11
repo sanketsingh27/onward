@@ -34,7 +34,7 @@ test('drops below the comp floor', () => {
     id: 'x', board: 'b', company: 'c', title: 'Senior Software Engineer',
     location: 'San Francisco, CA', secondaryLocations: [], remote: 'Remote',
     compensation: { currency: 'USD', salaryMin: 90000, salaryMax: 120000 },
-    employmentType: 'FullTime', publishedAt: '', applyUrl: '', descriptionPlain: '', fit: 0,
+    employmentType: 'FullTime', publishedAt: '', applyUrl: '', descriptionPlain: '',
   }
   assert.equal(hardFilter([low], profile).survivors.length, 0)
 })
@@ -45,7 +45,7 @@ test('flags, but keeps, an opening with an excluded term', () => {
     location: 'San Francisco, CA', secondaryLocations: [], remote: 'Remote',
     compensation: { currency: 'USD', salaryMin: 210000, salaryMax: 260000 },
     employmentType: 'FullTime', publishedAt: '', applyUrl: '',
-    descriptionPlain: 'Requires an active security clearance.', fit: 0,
+    descriptionPlain: 'Requires an active security clearance.',
   }
   const { survivors, flagged } = hardFilter([cleared], profile)
   assert.equal(survivors.length, 1)
@@ -58,7 +58,7 @@ test('drops a non-senior title under a Senior+ profile', () => {
     id: 'x', board: 'b', company: 'c', title: 'Associate Engineer',
     location: 'San Francisco, CA', secondaryLocations: [], remote: 'Remote',
     compensation: { currency: 'USD', salaryMin: 190000, salaryMax: 220000 },
-    employmentType: 'FullTime', publishedAt: '', applyUrl: '', descriptionPlain: '', fit: 0,
+    employmentType: 'FullTime', publishedAt: '', applyUrl: '', descriptionPlain: '',
   }
   assert.equal(hardFilter([jr], profile).survivors.length, 0)
 })

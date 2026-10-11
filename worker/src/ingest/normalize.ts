@@ -21,8 +21,6 @@ export type Opening = {
   publishedAt: string
   applyUrl: string
   descriptionPlain: string
-  fit: number
-  reason?: string
 }
 
 type AshbyComponent = {
@@ -96,7 +94,6 @@ export function normalizeJob(raw: AshbyJob, board: { slug: string; companyName: 
     publishedAt: raw.publishedAt ?? '',
     applyUrl: raw.applyUrl ?? '',
     descriptionPlain: raw.descriptionPlain ?? '',
-    fit: 0,
   }
 }
 
@@ -124,13 +121,10 @@ export type OpeningRow = {
   published_at: string
   apply_url: string
   description_plain: string
-  reason: string | null
 }
 
-export type OpeningWithFitRow = OpeningRow & { fit: number }
-
 // D1 rows use snake_case columns; this maps them back to the camelCase Opening.
-export function fromRow(r: OpeningRow, fit = 0): Opening {
+export function fromRow(r: OpeningRow): Opening {
   return {
     id: r.id,
     board: r.board,
@@ -151,7 +145,5 @@ export function fromRow(r: OpeningRow, fit = 0): Opening {
     publishedAt: r.published_at,
     applyUrl: r.apply_url,
     descriptionPlain: r.description_plain,
-    fit,
-    reason: r.reason ?? undefined,
   }
 }

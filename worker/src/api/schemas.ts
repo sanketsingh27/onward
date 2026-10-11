@@ -13,12 +13,6 @@ export const reasonInputSchema = z.object({
   description: z.string().optional(),
 })
 
-export const rankInputSchema = z.object({
-  resume: z.string().min(1),
-  topN: z.number().int().positive().optional(),
-})
 
 export type StateInput = z.infer<typeof stateInputSchema>
 export type EmbedInput = z.infer<typeof embedInputSchema>
-export type ReasonInput = z.infer<typeof reasonInputSchema>
-export type RankInput = z.infer<typeof rankInputSchema>
