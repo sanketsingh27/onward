@@ -1,5 +1,6 @@
 'use client'
 import { useAuth, UserButton } from '@clerk/nextjs'
+import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { TABS, type Opening, type OpeningState, type TabId } from '@/lib/openings'
@@ -12,7 +13,8 @@ import { EmptyFiltered, ErrorBanner, Skeletons } from './States'
 type OpeningStatus = 'loading' | 'ready'
 
 export function Dashboard() {
-  const { getToken } = useAuth()
+  const router = useRouter()
+  const { getToken, isLoaded, isSignedIn } = useAuth()
   const [openings, setOpenings] = useState<Opening[]>([])
   const [states, setStates] = useState<Record<string, OpeningState>>({})
   const [tab, setTab] = useState<TabId>('all')
@@ -44,6 +46,12 @@ export function Dashboard() {
   useEffect(() => {
     void refresh()
   }, [refresh])
+
+  useEffect(() => {
+    if (isLoaded && !isSignedIn) {
+      router.replace('/sign-in')
+    }
+  }, [isLoaded, isSignedIn, router])
 
   const visible = useMemo(() => {
     const filtered = tab === 'all'

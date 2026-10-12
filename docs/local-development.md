@@ -18,6 +18,13 @@ The launcher applies the Worker migrations to **local D1 only**, seeds the local
 
 Remote Workers AI and Vectorize operations use Cloudflare resources and may consume account quota or incur charges. Local D1 and Queues do not write to their deployed resources. Board ingestion still fetches the configured Ashby feeds over the network.
 
+## Authentication
+
+- `/sign-in` and `/sign-up` are public Clerk routes rendered on the blurred authentication shell.
+- A signed-in request to `/sign-in` or `/sign-up` redirects to `/` on the server before Clerk renders an auth form. The guard keeps the single-session policy.
+- The dashboard (`/`) requires an active Clerk session. A signed-out document request redirects to `/sign-in`; signing out returns there too.
+- The Worker verifies the Clerk bearer token for every route except `/health`; absent or invalid credentials receive `401`.
+
 ## One-time setup
 
 1. Install dependencies: run `npm ci` in both `app/` and `worker/`.

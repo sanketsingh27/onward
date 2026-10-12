@@ -1,6 +1,7 @@
 import { SignUp } from '@clerk/nextjs'
 import { auth } from '@clerk/nextjs/server'
 import { redirect } from 'next/navigation'
+import { AuthShell } from '@/components/AuthShell'
 
 export default async function SignUpPage() {
   const { isAuthenticated } = await auth()
@@ -8,8 +9,8 @@ export default async function SignUpPage() {
   if (isAuthenticated) redirect('/')
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-slate-50 p-6">
-      <SignUp forceRedirectUrl="/" signInForceRedirectUrl="/" />
-    </main>
+    <AuthShell>
+      <SignUp fallbackRedirectUrl="/" signInFallbackRedirectUrl="/" />
+    </AuthShell>
   )
 }
