@@ -8,7 +8,7 @@ From the repository root:
 ./dev.sh
 ```
 
-The launcher applies the Worker migrations to **local D1 only**, seeds the local board registry, then starts the local Worker and Next.js app together. Press `Ctrl-C` to stop both processes.
+The launcher reapplies idempotent Worker migrations to **local D1 only**, seeds the local board registry, then starts the local Worker and Next.js app together. Press `Ctrl-C` to stop both processes.
 
 - Dashboard: `http://localhost:3000`
 - Worker API: `http://127.0.0.1:8787`
