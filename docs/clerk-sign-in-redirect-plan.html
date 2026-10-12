@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<title>Clerk Redirect Plan</title>
+<link rel="stylesheet" href="/Users/sanketsingh/.omp/plugins/cache/plugins/claude-community___html-plan___1.0.0/skills/html-plan/runtime/htmlplan.css">
+<script src="/Users/sanketsingh/.omp/plugins/cache/plugins/claude-community___html-plan___1.0.0/skills/html-plan/runtime/htmlplan.js" defer></script>
+<style data-mock-shared>
+  .ui { font: 14px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: #172033; background: #fff; border: 1px solid #d9e0ea; border-radius: 10px; overflow: hidden; }
+  .ui .bar { padding: 8px 13px; color: #667085; background: #f8fafc; border-bottom: 1px solid #e7ecf2; font: 12px/1.3 ui-monospace, SFMono-Regular, Menlo, monospace; }
+  .ui .body { padding: 22px 18px; }
+  .ui h3 { margin: 0 0 4px; font-size: 17px; }
+  .ui p { margin: 0; color: #667085; }
+  .ui .tag { display: inline-block; margin-top: 14px; padding: 4px 8px; border-radius: 99px; color: #146c43; background: #eaf8ef; font-size: 12px; font-weight: 650; }
+</style>
+<body>
+<header>
+  <h1>Clerk Sign-In Redirect in Onward</h1>
+  <doc-changes changed="2"></doc-changes>
+  <details class="thread"><summary>Why · 1 request</summary>
+    <doc-quote via="prompt" from="the user">i am see the following error ui-common_ui_96623b_1.40.0.js:5 🔒 Clerk: The &lt;SignIn/&gt; component cannot render when a user is already signed in, unless the application allows multiple sessions. Since a user is signed in and this application only allows a single session, Clerk is redirecting to the `afterSignIn` URL instead. (This notice only appears in development) plese plan how we will solve this doa deatailed analysis use graphhify for for tracing tell me what are the possibilites</doc-quote>
+  </details>
+</header>
+<main>
+<doc-plan>
+  <doc-claim>
+    <p>A signed-in user leaves <code>/sign-in</code> before Clerk renders <code>SignIn</code>.</p>
+    <doc-mock frame="browser" url="onward.local/" w="440" caption="The browser shows the home page, not the sign-in card."><template>
+      <div class="ui">
+        <div class="bar">onward.local/</div>
+        <div class="body" data-ref="home"><h3>Openings</h3><p>Ranked by fit against your profile.</p><span class="tag">Signed in</span></div>
+      </div>
+    </template><doc-pin ref="home" title="The target page">The redirect uses the home path.</doc-pin></doc-mock>
+    <doc-note tone="info"><strong>Cause</strong> Clerk does not show <code>SignIn</code> with one active session. It sends the browser to its sign-in fallback path. The browser message is a development notice.</doc-note>
+    <doc-claim>
+      <p>The route checks the session before it returns <code>SignIn</code>.</p>
+      <doc-calls title="Sign-in route" caption="The session check stops Clerk before the component renders."><script type="text/plain">
+~ SignInPage()                                  @ app/src/app/sign-in/[[...sign-in]]/page.tsx:4
++   auth()                                      @ app/src/app/sign-in/[[...sign-in]]/page.tsx:4
++   redirect('/')                               @ app/src/app/sign-in/[[...sign-in]]/page.tsx:4
+    <SignIn/>                                  @ app/src/app/sign-in/[[...sign-in]]/page.tsx:7
+</script></doc-calls>
+      <doc-claim at="app/src/app/sign-in/[[...sign-in]]/page.tsx:4">
+        <p><b>page.tsx:4</b> · SignInPage()</p>
+        <doc-code title="sign-in page · proposed diff" lang="tsx" diff file="app/src/app/sign-in/[[...sign-in]]/page.tsx"><script type="text/plain">
+@@ -1,10 +1,16 @@
+ import { SignIn } from '@clerk/nextjs'
++import { auth } from '@clerk/nextjs/server'
++import { redirect } from 'next/navigation'
+ import { AuthShell } from '@/components/AuthShell'
+ 
+-export default function SignInPage() {
++export default async function SignInPage() {
++  const { isAuthenticated } = await auth()
++
++  if (isAuthenticated) redirect('/')
++
+   return (
+     <AuthShell>
+       <SignIn fallbackRedirectUrl="/" signUpFallbackRedirectUrl="/" withSignUp />
+     </AuthShell>
+   )
+ }
+</script></doc-code>
+      </doc-claim>
+    </doc-claim>
+  </doc-claim>
+
+  <doc-claim>
+    <p>A signed-in user leaves <code>/sign-up</code> before Clerk renders <code>SignUp</code>.</p>
+    <doc-mock frame="browser" url="onward.local/" w="440" caption="The sign-up route uses the same home page."><template>
+      <div class="ui">
+        <div class="bar">onward.local/</div>
+        <div class="body" data-ref="home"><h3>Openings</h3><p>Ranked by fit against your profile.</p><span class="tag">Signed in</span></div>
+      </div>
+    </template><doc-pin ref="home" title="The same target">The sign-up route uses the home path.</doc-pin></doc-mock>
+    <doc-note tone="info"><strong>Reason</strong> The sign-up route also renders a Clerk form without a session check. The same rule can affect this route.</doc-note>
+    <doc-ask id="auth-routes">
+      <p>Which routes use this redirect?</p>
+      <label><input type="radio" name="auth-routes" value="both" checked> Sign-in and sign-up <small>Remove the notice from both routes.</small></label>
+      <label><input type="radio" name="auth-routes" value="sign-in"> Sign-in only <small>Claim 2 goes.</small></label>
+    </doc-ask>
+    <doc-claim>
+      <p>The route checks the session before it returns <code>SignUp</code>.</p>
+      <doc-calls title="Sign-up route" caption="The two public auth routes use the same rule."><script type="text/plain">
+~ SignUpPage()                                  @ app/src/app/sign-up/[[...sign-up]]/page.tsx:4
++   auth()                                      @ app/src/app/sign-up/[[...sign-up]]/page.tsx:4
++   redirect('/')                               @ app/src/app/sign-up/[[...sign-up]]/page.tsx:4
+    <SignUp/>                                  @ app/src/app/sign-up/[[...sign-up]]/page.tsx:7
+</script></doc-calls>
+      <doc-claim at="app/src/app/sign-up/[[...sign-up]]/page.tsx:4">
+        <p><b>page.tsx:4</b> · SignUpPage()</p>
+        <doc-code title="sign-up page · proposed diff" lang="tsx" diff file="app/src/app/sign-up/[[...sign-up]]/page.tsx"><script type="text/plain">
+@@ -1,10 +1,16 @@
+ import { SignUp } from '@clerk/nextjs'
++import { auth } from '@clerk/nextjs/server'
++import { redirect } from 'next/navigation'
+ import { AuthShell } from '@/components/AuthShell'
+ 
+-export default function SignUpPage() {
++export default async function SignUpPage() {
++  const { isAuthenticated } = await auth()
++
++  if (isAuthenticated) redirect('/')
++
+   return (
+     <AuthShell>
+       <SignUp fallbackRedirectUrl="/" signInFallbackRedirectUrl="/" />
+     </AuthShell>
+   )
+ }
+</script></doc-code>
+      </doc-claim>
+    </doc-claim>
+  </doc-claim>
+
+  <doc-claim>
+    <p>The app keeps one active Clerk session for each browser.</p>
+    <doc-code src="app/src/app/layout.tsx" lines="20-23" hl="21" caption="The provider gives the two routes their Clerk settings."></doc-code>
+    <doc-ask id="session-policy">
+      <p>Which Clerk session policy does the app use?</p>
+      <label><input type="radio" name="session-policy" value="single" checked> One active session <small>Use the two route guards.</small></label>
+      <label><input type="radio" name="session-policy" value="multiple"> More than one session <small>Claims 1 and 2 go.</small></label>
+    </doc-ask>
+    <div data-if="session-policy=multiple"><doc-note tone="risk"><strong>More sessions</strong> The Clerk Dashboard must enable multi-session handling. The Dashboard must remount when the active session changes.</doc-note></div>
+    <doc-note tone="info"><strong>Other path</strong> A middleware redirect can stop both routes. The page guards are smaller. They keep the rule with the component.</doc-note>
+  </doc-claim>
+
+  <doc-claim aux="scope">
+    <p>Not changing: the home route, sign-out, Clerk keys, or Worker token checks.</p>
+    <ul>
+      <li>The home route still uses <code>auth.protect()</code>.</li>
+      <li>The Clerk fallback paths stay <code>/</code>.</li>
+      <li>The app does not turn off Clerk development notices.</li>
+    </ul>
+  </doc-claim>
+</doc-plan>
+</main>
+</body>
+</html>
