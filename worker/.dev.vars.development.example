@@ -1,5 +1,0 @@
-# Clerk PEM public key used to verify session JWTs.
-CLERK_JWT_KEY="replace-with-the-Clerk-JWT-public-key"
-
-# Include the origin used by the local browser session.
-CLERK_AUTHORIZED_PARTIES="http://localhost:3000"

@@ -15,4 +15,3 @@ SELECT CAST(user_id AS TEXT), resume, filters FROM profile;
 
 DROP TABLE profile;
 ALTER TABLE profile_new RENAME TO profile;
-UPDATE openings SET fit = NULL;

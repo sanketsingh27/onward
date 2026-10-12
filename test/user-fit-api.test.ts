@@ -9,10 +9,12 @@ const { privateKey, publicKey } = generateKeyPairSync('rsa', { modulusLength: 20
 
 function makeDatabase() {
   const db = new DatabaseSync(':memory:')
-  for (const file of ['0002_app.sql', '0003_vectors.sql', '0004_profile.sql', '0005_scans.sql', '0006_resume_embeddings.sql', '0007_user_opening_fits.sql', '0008_dynamic_opening_results.sql']) {
-    db.exec(readFileSync(new URL(`../migrations/${file}`, import.meta.url), 'utf8'))
+  const migrationFiles = ['0002_app.sql', '0003_vectors.sql', '0004_profile.sql', '0005_scans.sql', '0006_resume_embeddings.sql', '0007_user_opening_fits.sql', '0008_dynamic_opening_results.sql']
+  for (let run = 0; run < 2; run += 1) {
+    for (const file of migrationFiles) {
+      db.exec(readFileSync(new URL(`../migrations/${file}`, import.meta.url), 'utf8'))
+    }
   }
-
   const filters = JSON.stringify({
     remote: 'Remote only',
     locations: [],
@@ -134,6 +136,7 @@ test('Opening APIs calculate dynamic Fits for available Openings and return acte
 
     assert.equal(db.prepare("SELECT COUNT(*) AS count FROM sqlite_master WHERE type = 'table' AND name = 'user_opening_fits'").get().count, 0)
     assert.equal(db.prepare("SELECT COUNT(*) AS count FROM pragma_table_info('openings') WHERE name = 'fit'").get().count, 0)
+    assert.equal(db.prepare("SELECT COUNT(*) AS count FROM sqlite_master WHERE type = 'table' AND name = 'opening_embeddings'").get().count, 1)
   } finally {
     db.close()
   }
