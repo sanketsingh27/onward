@@ -3,6 +3,7 @@ import { Hono } from 'hono'
 import { cors } from 'hono/cors'
 import type { ApiEnv } from './api/types'
 import { openingsRoutes } from './routes/openings'
+import { profileRoutes } from './routes/profile'
 import { operationRoutes } from './routes/operations'
 import { stateRoutes } from './routes/state'
 
@@ -62,6 +63,7 @@ app.use('*', async (c, next) => {
 
 app.get('/health', (c) => c.json({ ok: true }))
 app.route('/', openingsRoutes)
+app.route('/', profileRoutes)
 app.route('/', stateRoutes)
 app.route('/', operationRoutes)
 

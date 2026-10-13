@@ -18,6 +18,13 @@ Errors use JSON: `{ "error": "..." }`. Unexpected server errors return HTTP 500 
 | `GET /openings?limit=1..100` | Calculate and list available recommendations from the signed-in Profile's Vectorize recall. Applied and dismissed Openings are excluded; Fit is computed for this response and never stored. | `200 Opening[]` |
 | `GET /openings/history?limit=1..100&cursor=<state-id>` | List the signed-in Profile's applied and dismissed Openings, newest state first. | `200 { data: (Opening & { state })[], nextCursor: string \| null }` |
 
+## Profile
+
+| Method and path | Description | Success |
+| --- | --- | --- |
+| `GET /profile` | Read the authenticated user's resume and matching filters. | `200 Profile`; `404` when no profile exists |
+| `PUT /profile` | Create or replace the authenticated user's full profile. Body: `{ "resume": string, "filters": { "remote": "Remote only" \| "Hybrid ok" \| "Onsite ok", "locations": string[], "compFloorUsd": number, "compFloorInr": number, "employmentType": "Full-time" \| "Contract", "seniority": "Mid" \| "Senior" \| "Senior+" \| "Staff+", "excludeTerms": string[] } }`. | `200 Profile` |
+
 ## Opening state
 
 | Method and path | Description | Success |

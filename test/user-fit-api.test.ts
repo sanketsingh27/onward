@@ -9,7 +9,7 @@ const { privateKey, publicKey } = generateKeyPairSync('rsa', { modulusLength: 20
 
 function makeDatabase() {
   const db = new DatabaseSync(':memory:')
-  const migrationFiles = ['0002_app.sql', '0003_vectors.sql', '0004_profile.sql', '0005_scans.sql', '0006_resume_embeddings.sql', '0007_user_opening_fits.sql', '0008_dynamic_opening_results.sql']
+  const migrationFiles = ['0002_app.sql', '0003_vectors.sql', '0004_profile.sql', '0005_scans.sql', '0006_resume_embeddings.sql', '0007_user_opening_fits.sql', '0008_dynamic_opening_results.sql', '0009_profile_user_ids.sql']
   for (let run = 0; run < 2; run += 1) {
     for (const file of migrationFiles) {
       db.exec(readFileSync(new URL(`../migrations/${file}`, import.meta.url), 'utf8'))

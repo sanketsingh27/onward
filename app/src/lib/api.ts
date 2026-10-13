@@ -1,5 +1,18 @@
 import type { Opening, OpeningState } from './openings'
 
+export type Profile = {
+  resume: string
+  filters: {
+    remote: 'Remote only' | 'Hybrid ok' | 'Onsite ok'
+    locations: string[]
+    compFloorUsd: number
+    compFloorInr: number
+    employmentType: 'Full-time' | 'Contract'
+    seniority: 'Mid' | 'Senior' | 'Senior+' | 'Staff+'
+    excludeTerms: string[]
+  }
+}
+
 const BASE = process.env.NEXT_PUBLIC_WORKER_URL ?? 'https://onward-worker.singhsanket27.workers.dev'
 
 function authHeaders(token: string): HeadersInit {
@@ -10,6 +23,23 @@ export async function fetchOpenings(token: string): Promise<Opening[]> {
   const res = await fetch(`${BASE}/openings`, { headers: authHeaders(token) })
   if (!res.ok) throw new Error(`openings: ${res.status}`)
   return (await res.json()) as Opening[]
+}
+
+export async function fetchProfile(token: string): Promise<Profile | null> {
+  const res = await fetch(`${BASE}/profile`, { headers: authHeaders(token) })
+  if (res.status === 404) return null
+  if (!res.ok) throw new Error(`profile: ${res.status}`)
+  return (await res.json()) as Profile
+}
+
+export async function saveProfile(token: string, profile: Profile): Promise<Profile> {
+  const res = await fetch(`${BASE}/profile`, {
+    method: 'PUT',
+    headers: { ...authHeaders(token), 'Content-Type': 'application/json' },
+    body: JSON.stringify(profile),
+  })
+  if (!res.ok) throw new Error(`profile: ${res.status}`)
+  return (await res.json()) as Profile
 }
 
 export type OpeningHistoryPage = {

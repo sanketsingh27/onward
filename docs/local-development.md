@@ -36,4 +36,4 @@ Remote Workers AI and Vectorize operations use Cloudflare resources and may cons
 
 ## Local data
 
-The launcher initializes schema and board registry data in local Wrangler D1 storage. It does not seed a resume/profile or opening records. Running a scan requires a profile for the authenticated user's Clerk ID in the local `profile` table. Do not point the local Worker at production D1; local D1 is intentional.
+The launcher initializes schema and board registry data in local Wrangler D1 storage. It does not seed a resume/profile or opening records. After signing in, the dashboard shows the profile form; saving it writes your resume and preferences under the authenticated Clerk user ID. Running a scan still requires opening records in local D1. Do not point the local Worker at production D1; local D1 is intentional.

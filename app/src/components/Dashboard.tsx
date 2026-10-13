@@ -4,13 +4,16 @@ import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { TABS, type Opening, type OpeningState, type TabId } from '@/lib/openings'
-import { fetchOpeningHistory, fetchOpenings, fetchState, setOpeningState } from '@/lib/api'
+import { fetchOpeningHistory, fetchOpenings, fetchProfile, fetchState, saveProfile, setOpeningState, type Profile } from '@/lib/api'
 import { Sidebar } from './Sidebar'
 import { CommandInput } from './CommandInput'
 import { JobRow } from './JobRow'
 import { EmptyFiltered, ErrorBanner, Skeletons } from './States'
+import { ProfileEditor } from './ProfileEditor'
 
 type OpeningStatus = 'loading' | 'ready'
+type ProfileStatus = 'loading' | 'ready' | 'missing'
+
 
 export function Dashboard() {
   const router = useRouter()
@@ -20,13 +23,28 @@ export function Dashboard() {
   const [tab, setTab] = useState<TabId>('all')
   const [status, setStatus] = useState<OpeningStatus>('loading')
   const [error, setError] = useState(false)
+  const [profile, setProfile] = useState<Profile | null>(null)
+  const [profileStatus, setProfileStatus] = useState<ProfileStatus>('loading')
+  const [editingProfile, setEditingProfile] = useState(false)
+  const [isSavingProfile, setIsSavingProfile] = useState(false)
+  const [profileError, setProfileError] = useState<string | null>(null)
 
   const refresh = useCallback(async () => {
     setError(false)
+    setProfileError(null)
     setStatus('loading')
+    setProfileStatus('loading')
     try {
       const token = await getToken()
       if (!token) throw new Error('missing session token')
+      const loadedProfile = await fetchProfile(token)
+      setProfile(loadedProfile)
+      if (!loadedProfile) {
+        setProfileStatus('missing')
+        return
+      }
+
+      setProfileStatus('ready')
       const [recommendations, history, rows] = await Promise.all([
         fetchOpenings(token),
         fetchOpeningHistory(token),
@@ -38,6 +56,7 @@ export function Dashboard() {
       setStates(map)
     } catch {
       setError(true)
+      setProfileStatus('ready')
     } finally {
       setStatus('ready')
     }
@@ -88,6 +107,24 @@ export function Dashboard() {
     }
   }
 
+  async function saveCurrentProfile(nextProfile: Profile) {
+    setIsSavingProfile(true)
+    setProfileError(null)
+    try {
+      const token = await getToken()
+      if (!token) throw new Error('missing session token')
+      const savedProfile = await saveProfile(token, nextProfile)
+      setProfile(savedProfile)
+      setProfileStatus('ready')
+      setEditingProfile(false)
+      await refresh()
+    } catch {
+      setProfileError('Your profile could not be saved. Check the fields and try again.')
+    } finally {
+      setIsSavingProfile(false)
+    }
+  }
+
   return (
     <div className="flex min-h-[100dvh] flex-col lg:flex-row">
       <Sidebar loading={status === 'loading'} onRefresh={refresh} />
@@ -100,6 +137,15 @@ export function Dashboard() {
             </div>
             <div className="flex w-full items-center justify-between gap-4 md:w-80">
               <CommandInput />
+              {profile && (
+                <button
+                  type="button"
+                  onClick={() => setEditingProfile(true)}
+                  className="rounded-lg px-3 py-1.5 text-[13px] font-medium text-slate-600 transition hover:bg-slate-100 hover:text-slate-900"
+                >
+                  Profile
+                </button>
+              )}
               <UserButton />
             </div>
           </div>
@@ -124,28 +170,38 @@ export function Dashboard() {
           </div>
         </header>
 
-        {error && <ErrorBanner onDismiss={() => setError(false)} />}
+        {error && profileStatus !== 'missing' && <ErrorBanner onDismiss={() => setError(false)} />}
 
-        <div className="mx-auto max-w-[1400px]">
-          {status === 'loading' && <Skeletons />}
-          {status === 'ready' &&
-            (visible.length === 0 ? (
-              <EmptyFiltered tab={tab} />
-            ) : (
-              <motion.div
-                initial="hidden"
-                animate="show"
-                variants={{ show: { transition: { staggerChildren: 0.06 } } }}
-                className="divide-y divide-slate-200/70"
-              >
-                <AnimatePresence mode="popLayout" initial={false}>
-                  {visible.map((o, i) => (
-                    <JobRow key={o.id} opening={o} rank={i + 1} state={states[o.id] ?? null} onState={setState} />
-                  ))}
-                </AnimatePresence>
-              </motion.div>
-            ))}
-        </div>
+        {profileStatus === 'missing' || editingProfile ? (
+          <ProfileEditor
+            profile={profile}
+            isSaving={isSavingProfile}
+            error={profileError}
+            onCancel={() => setEditingProfile(false)}
+            onSave={saveCurrentProfile}
+          />
+        ) : (
+          <div className="mx-auto max-w-[1400px]">
+            {status === 'loading' && <Skeletons />}
+            {status === 'ready' &&
+              (visible.length === 0 ? (
+                <EmptyFiltered tab={tab} />
+              ) : (
+                <motion.div
+                  initial="hidden"
+                  animate="show"
+                  variants={{ show: { transition: { staggerChildren: 0.06 } } }}
+                  className="divide-y divide-slate-200/70"
+                >
+                  <AnimatePresence mode="popLayout" initial={false}>
+                    {visible.map((o, i) => (
+                      <JobRow key={o.id} opening={o} rank={i + 1} state={states[o.id] ?? null} onState={setState} />
+                    ))}
+                  </AnimatePresence>
+                </motion.div>
+              ))}
+          </div>
+        )}
       </main>
     </div>
   )

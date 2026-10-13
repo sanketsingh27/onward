@@ -24,7 +24,7 @@ Copy each printed `database_id` into `worker/wrangler.jsonc`, replacing `REPLACE
 ```bash
 npx wrangler d1 execute onward-boards --remote --file ../migrations/0001_boards.sql
 npx wrangler d1 execute onward-app --remote --file ../migrations/0002_app.sql
-for migration in 0003_vectors.sql 0004_profile.sql 0005_scans.sql 0006_resume_embeddings.sql 0007_user_opening_fits.sql 0008_dynamic_opening_results.sql; do
+for migration in 0003_vectors.sql 0004_profile.sql 0005_scans.sql 0006_resume_embeddings.sql 0007_user_opening_fits.sql 0008_dynamic_opening_results.sql 0009_profile_user_ids.sql; do
   npx wrangler d1 execute onward-app --remote --file "../migrations/$migration"
 done
 ```
