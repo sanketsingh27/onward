@@ -20,15 +20,19 @@ Frozen interfaces every ticket codes against. **Read-only to workers** — a cha
 
 ```
 boards   { slug TEXT PK, company_name TEXT, feed_url TEXT, ats TEXT, last_fetched_at TEXT }
-users    { id INTEGER PK, email TEXT, name TEXT }
+users    { id TEXT PK, email TEXT, name TEXT }
+profile  { user_id TEXT PK, resume TEXT, filters TEXT }
+resume_embeddings { user_id TEXT PK, resume_hash TEXT, vector TEXT }
 openings { id TEXT PK, board TEXT, company TEXT, title TEXT, location TEXT, secondary_locations TEXT,
            remote TEXT, currency TEXT, salary_min INTEGER, salary_max INTEGER, equity_min REAL,
            equity_max REAL, bonus INTEGER, employment_type TEXT, published_at TEXT, apply_url TEXT,
            description_plain TEXT }
 opening_embeddings { opening_id TEXT PK, description_hash TEXT }
-state    { id INTEGER PK, user_id INTEGER, opening_id TEXT, status TEXT, updated_at TEXT }
+state    { id INTEGER PK, user_id TEXT, opening_id TEXT, status TEXT, updated_at TEXT }
          -- status ∈ saved | applied | dismissed
 ```
+
+Profile, Resume Embedding, and State ownership use the same verified opaque Clerk subject. Filters and cached vectors are JSON text. Local schema-history and demo-owner mapping tables are development bookkeeping, not domain seed targets or public API data.
 
 ## Opening type (TS)
 
