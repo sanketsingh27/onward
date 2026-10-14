@@ -82,3 +82,14 @@ Readiness follows schema/Board setup, verified owner and saved Profile/Resume ha
 If initial State cannot retain both saved and unacted actual Recall Survivors with the saved filters/live data, no examples or completion marker are written. `./dev.sh seed` exits **2** and reports incomplete setup. `./dev.sh` reports the same limitation but starts the application so preferences can be edited; it does not print complete readiness. Edit preferences, then rerun `./dev.sh seed`. Do not reset filters merely to make a seed check pass.
 
 Workers AI error **4006** means the daily free allocation is exhausted. Do not substitute fake vectors or bypass the failed stage. Wait for quota reset or explicitly arrange paid allocation, then rerun; already accepted real derivations remain reusable. Shared Vectorize IDs can become query-visible shortly after an upsert, so an initial Recall limitation can also resolve on a later run.
+
+## Verify changes
+
+```sh
+node --experimental-strip-types --experimental-loader ./test/ts-import-loader.mjs --test test/*.test.ts
+npm --prefix worker run typecheck
+./worker/node_modules/.bin/tsc -p scripts/tsconfig.json
+./app/node_modules/.bin/tsc --noEmit -p app/tsconfig.json
+```
+
+Deterministic regressions cover cached-source failure/missing-vector recovery and description-change invalidation: only the changed Opening receives new model/index work, its hash advances, unchanged siblings stay cached, and the authenticated recommendation uses its updated Fit. Real-resource bootstrap smoke remains separate from the permanent suite.

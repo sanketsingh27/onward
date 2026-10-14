@@ -248,10 +248,6 @@ async function bootstrapState(root, userId) {
   }
 }
 
-function isOpeningSource(source) {
-  return source && typeof source === 'object' && Array.isArray(source.jobs)
-}
-
 function readOpeningCache(root) {
   const path = join(root, 'seed', '.local', 'openings.json')
   if (!existsSync(path)) return new Map()
@@ -265,7 +261,7 @@ function readOpeningCache(root) {
     throw new Error('Opening bootstrap input stage failed: seed/.local/openings.json has no Board sources.')
   }
   const entries = Object.entries(parsed.boards)
-  if (entries.length === 0 || entries.some(([, source]) => !isOpeningSource(source))) {
+  if (entries.length === 0 || entries.some(([, source]) => !source || typeof source !== 'object' || !Array.isArray(source.jobs))) {
     throw new Error('Opening bootstrap input stage failed: seed/.local/openings.json contains an empty or invalid Board source.')
   }
   return new Map(entries)
@@ -318,7 +314,7 @@ async function bootstrapOpenings(root) {
       if (sources.has(board.slug)) continue
       try {
         const source = await fetchBoard(board.feed_url)
-        if (!isOpeningSource(source)) throw new Error('Ashby returned an invalid Opening source')
+        if (!source || typeof source !== 'object' || !Array.isArray(source.jobs)) throw new Error('Ashby returned an invalid Opening source')
         sources.set(board.slug, source)
         writeOpeningCache(root, sources)
       } catch (error) {

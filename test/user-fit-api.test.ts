@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { generateKeyPairSync, sign } from 'node:crypto'
+import { createHash, generateKeyPairSync, sign } from 'node:crypto'
 import { DatabaseSync } from 'node:sqlite'
 import { readFileSync } from 'node:fs'
 import worker from '../worker/src/index.ts'
@@ -148,11 +148,14 @@ test('Opening APIs calculate dynamic Fits for available Openings and return acte
   }
 })
 
-test('cached Opening source recovers a failed index and becomes an authenticated recommendation without a feed refetch', async () => {
+test('cached Opening source recovers failed/missing vectors and invalidates only changed descriptions without refetching', async () => {
   const db = makeDatabase()
   db.exec('DELETE FROM state; DELETE FROM openings; DELETE FROM opening_embeddings;')
   const vectors = new Map<string, number[]>()
   let upserts = 0
+  let embeddedTexts = 0
+  let modelVector = [1, 0]
+  const indexedIds: string[] = []
   let failIndex = true
   const originalFetch = globalThis.fetch
   globalThis.fetch = async () => { throw new Error('cached source must not refetch its Board') }
@@ -161,16 +164,22 @@ test('cached Opening source recovers a failed index and becomes an authenticated
     BOARD_DB: {
       prepare: () => ({ all: async () => ({ results: [{ slug: 'openai', company_name: 'OpenAI', feed_url: 'https://feed.test' }] }) }),
     },
-    AI: { run: async (_model: string, input: { text: string[] }) => ({ data: input.text.map(() => [1, 0]) }) },
+    AI: { run: async (_model: string, input: { text: string[] }) => {
+      embeddedTexts += input.text.length
+      return { data: input.text.map(() => [...modelVector]) }
+    } },
     VECTORIZE: {
       upsert: async (entries: Array<{ id: string; values: number[] }>) => {
         upserts += 1
         if (failIndex) throw new Error('temporary Vectorize failure')
+        indexedIds.push(...entries.map((entry) => entry.id))
         for (const entry of entries) vectors.set(entry.id, entry.values)
       },
       getByIds: async (ids: string[]) => ids.filter((id) => vectors.has(id)).map((id) => ({ id, values: vectors.get(id) })),
       deleteByIds: async () => {},
-      query: async () => ({ matches: [...vectors.keys()].map((id) => ({ id, score: 0.91 })) }),
+      query: async (resume: number[]) => ({ matches: [...vectors].map(([id, vector]) => ({
+        id, score: resume[0] * vector[0] + resume[1] * vector[1],
+      })) }),
     },
     CLERK_JWT_KEY: publicKey.export({ format: 'pem', type: 'spki' }).toString(),
     CLERK_AUTHORIZED_PARTIES: 'https://onward.test',
@@ -185,7 +194,8 @@ test('cached Opening source recovers a failed index and becomes an authenticated
     const response = await worker.fetch(new Request('https://onward.test/openings', {
       headers: { Authorization: `Bearer ${token('user-a')}` },
     }), env, {} as never)
-    assert.deepEqual((await response.json() as Array<{ id: string }>).map(({ id }) => id), ['openai:1'])
+    const initialRecommendations = await response.json() as Array<{ id: string; fit: number }>
+    assert.deepEqual(initialRecommendations.map(({ id }) => id), ['openai:1'])
     assert.equal(upserts, 2, 'the retry indexes cached source instead of refetching the Board')
 
     vectors.clear()
@@ -194,6 +204,26 @@ test('cached Opening source recovers a failed index and becomes an authenticated
       headers: { Authorization: `Bearer ${token('user-a')}` },
     }), env, {} as never)
     assert.deepEqual((await repaired.json() as Array<{ id: string }>).map(({ id }) => id), ['openai:1'])
+
+    const beforeHashes = db.prepare('SELECT opening_id, description_hash FROM opening_embeddings ORDER BY opening_id').all()
+    const changedSource = structuredClone(ashbyFixture)
+    changedSource.jobs[0].descriptionPlain = 'Build distributed Node.js trading services with Kafka and Redis.'
+    modelVector = [0, 1]
+    embeddedTexts = 0
+    indexedIds.length = 0
+    await ingestBoards(env, { cachedBoards: new Map([['openai', changedSource]]), verifyIndex: true })
+    assert.equal(embeddedTexts, 1, 'only the changed description needs new model work')
+    assert.deepEqual(indexedIds, ['openai:1'])
+    const afterHashes = db.prepare('SELECT opening_id, description_hash FROM opening_embeddings ORDER BY opening_id').all()
+    assert.notEqual(afterHashes[0].description_hash, beforeHashes[0].description_hash)
+    assert.equal(afterHashes[0].description_hash, createHash('sha256').update(changedSource.jobs[0].descriptionPlain).digest('hex'))
+    assert.deepEqual(afterHashes.slice(1), beforeHashes.slice(1))
+    const changed = await worker.fetch(new Request('https://onward.test/openings', {
+      headers: { Authorization: `Bearer ${token('user-a')}` },
+    }), env, {} as never)
+    const changedRecommendations = await changed.json() as Array<{ id: string; fit: number }>
+    assert.equal(changedRecommendations[0].id, initialRecommendations[0].id)
+    assert.ok(changedRecommendations[0].fit < initialRecommendations[0].fit, 'available Fit uses the updated indexed vector')
   } finally {
     globalThis.fetch = originalFetch
     db.close()
