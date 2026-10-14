@@ -7,6 +7,10 @@ APP_DIR="$ROOT_DIR/app"
 WRANGLER="$WORKER_DIR/node_modules/.bin/wrangler"
 NEXT="$APP_DIR/node_modules/.bin/next"
 
+if [[ "${1:-}" == "schema" ]]; then
+  exec node "$ROOT_DIR/scripts/development-bootstrap.mjs"
+fi
+
 if [[ ! -x "$WRANGLER" || ! -x "$NEXT" ]]; then
   printf 'Install app and Worker dependencies first: npm ci in app/ and worker/\n' >&2
   exit 1
@@ -19,20 +23,7 @@ for port in 3000 8787; do
   fi
 done
 
-run_wrangler() {
-  (cd "$WORKER_DIR" && "$WRANGLER" "$@")
-}
-
-# Bootstrap local D1 databases only; never pass --remote here.
-run_wrangler d1 execute onward-boards --local --file "$ROOT_DIR/migrations/0001_boards.sql"
-for migration in 0002_app.sql 0003_vectors.sql 0004_profile.sql 0005_scans.sql 0006_resume_embeddings.sql 0007_user_opening_fits.sql 0008_dynamic_opening_results.sql 0009_profile_user_ids.sql; do
-  run_wrangler d1 execute onward-app --local --file "$ROOT_DIR/migrations/$migration"
-done
-run_wrangler d1 execute onward-boards --local --file "$ROOT_DIR/seed/seed.sql"
-
-if [[ ! -f "$WORKER_DIR/.dev.vars.development" ]]; then
-  printf '\nWorker auth is not configured. Copy worker/.dev.vars.development.example to worker/.dev.vars.development and fill in the Clerk values to use authenticated API routes.\n\n' >&2
-fi
+node "$ROOT_DIR/scripts/development-bootstrap.mjs"
 
 run_worker() {
   local status=0

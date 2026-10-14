@@ -8,7 +8,7 @@ From the repository root:
 ./dev.sh
 ```
 
-The launcher reapplies idempotent Worker migrations to **local D1 only**, seeds the local board registry, then starts the local Worker and Next.js app together. Press `Ctrl-C` to stop both processes.
+The launcher resolves development configuration, applies pending migrations to **local D1 only**, seeds the local Board registry, then starts the local Worker and Next.js app together. Historical migrations are adopted from the existing schema rather than repeatedly rebuilding tables. Press `Ctrl-C` to stop both processes.
 
 - Dashboard: `http://localhost:3000`
 - Worker API: `http://127.0.0.1:8787`
@@ -29,10 +29,19 @@ Remote Workers AI and Vectorize operations use Cloudflare resources and may cons
 
 1. Install dependencies: run `npm ci` in both `app/` and `worker/`.
 2. Log in to Cloudflare with Wrangler (`cd worker && npx wrangler login`). Local mode uses remote Workers AI and the dedicated development Vectorize index.
-3. Copy `worker/.dev.vars.development.example` to `worker/.dev.vars.development`. Set `CLERK_JWT_KEY` from the Clerk Dashboard and set `CLERK_AUTHORIZED_PARTIES` to the local app origin used in the browser, normally `http://localhost:3000`.
+3. Create `worker/.dev.vars.development` (or reuse it from the primary worktree). Set `CLERK_JWT_KEY` from the Clerk Dashboard and set `CLERK_AUTHORIZED_PARTIES` to the local app origin used in the browser, normally `http://localhost:3000`.
 4. Ensure `app/.env.local` has the Clerk frontend keys for the same Clerk instance.
 
-`.dev.vars.development` is ignored by Git. Never commit its real key values. The launcher warns, but does not stop, when this file is missing; health checks work, but authenticated API routes return 503 until Clerk auth is configured.
+`.dev.vars.development` is ignored by Git. Never commit its real key values. Startup requires the frontend and backend development configuration to be present locally or available from the primary worktree.
+
+### Git worktrees
+
+If this worktree lacks `app/.env.local` or `worker/.dev.vars.development`, startup discovers the primary worktree through Git and links only the missing file to its existing counterpart. Existing local files take precedence. Missing configuration in both locations stops setup with a diagnostic; the launcher never prints key values.
+
+Linked configuration is shared: editing a linked file changes the source used by every linked worktree. Create a separate local file when a worktree needs different settings. Each worktree keeps its own `.wrangler` databases; database storage is never copied or linked.
+
+Run `./dev.sh schema` to resolve configuration and apply local schema/Board setup without starting servers or accessing remote bindings. Schema changes and their migration-history entry are committed together.
+
 
 ## Local data
 
