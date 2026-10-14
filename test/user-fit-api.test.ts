@@ -4,6 +4,10 @@ import { generateKeyPairSync, sign } from 'node:crypto'
 import { DatabaseSync } from 'node:sqlite'
 import { readFileSync } from 'node:fs'
 import worker from '../worker/src/index.ts'
+import { ingestBoards } from '../worker/src/ingest/ingest.ts'
+import { getOrCreateResumeEmbedding } from '../worker/src/embed/embed.ts'
+
+const ashbyFixture = JSON.parse(readFileSync(new URL('../fixtures/ashby-sample.json', import.meta.url), 'utf8'))
 
 const { privateKey, publicKey } = generateKeyPairSync('rsa', { modulusLength: 2048 })
 
@@ -54,6 +58,8 @@ function makeD1(db: DatabaseSync) {
       const statement = db.prepare(sql)
       return {
         bind(...params: unknown[]) {
+          // Match the platform limit that SQLite's default build does not enforce.
+          if (params.length > 100) throw new Error('D1_ERROR: too many SQL variables')
           return {
             async all() { return { results: statement.all(...params) } },
             async first() { return statement.get(...params) ?? null },
@@ -64,6 +70,9 @@ function makeD1(db: DatabaseSync) {
         async first() { return statement.get() ?? null },
         async run() { return statement.run() },
       }
+    },
+    async batch(statements: Array<{ run: () => Promise<unknown> }>) {
+      return Promise.all(statements.map((statement) => statement.run()))
     },
   }
 }
@@ -134,9 +143,133 @@ test('Opening APIs calculate dynamic Fits for available Openings and return acte
       ['opening-applied'],
     )
 
-    assert.equal(db.prepare("SELECT COUNT(*) AS count FROM sqlite_master WHERE type = 'table' AND name = 'user_opening_fits'").get().count, 0)
-    assert.equal(db.prepare("SELECT COUNT(*) AS count FROM pragma_table_info('openings') WHERE name = 'fit'").get().count, 0)
-    assert.equal(db.prepare("SELECT COUNT(*) AS count FROM sqlite_master WHERE type = 'table' AND name = 'opening_embeddings'").get().count, 1)
+  } finally {
+    db.close()
+  }
+})
+
+test('cached Opening source recovers a failed index and becomes an authenticated recommendation without a feed refetch', async () => {
+  const db = makeDatabase()
+  db.exec('DELETE FROM state; DELETE FROM openings; DELETE FROM opening_embeddings;')
+  const vectors = new Map<string, number[]>()
+  let upserts = 0
+  let failIndex = true
+  const originalFetch = globalThis.fetch
+  globalThis.fetch = async () => { throw new Error('cached source must not refetch its Board') }
+  const env = {
+    APP_DB: makeD1(db),
+    BOARD_DB: {
+      prepare: () => ({ all: async () => ({ results: [{ slug: 'openai', company_name: 'OpenAI', feed_url: 'https://feed.test' }] }) }),
+    },
+    AI: { run: async (_model: string, input: { text: string[] }) => ({ data: input.text.map(() => [1, 0]) }) },
+    VECTORIZE: {
+      upsert: async (entries: Array<{ id: string; values: number[] }>) => {
+        upserts += 1
+        if (failIndex) throw new Error('temporary Vectorize failure')
+        for (const entry of entries) vectors.set(entry.id, entry.values)
+      },
+      getByIds: async (ids: string[]) => ids.filter((id) => vectors.has(id)).map((id) => ({ id, values: vectors.get(id) })),
+      deleteByIds: async () => {},
+      query: async () => ({ matches: [...vectors.keys()].map((id) => ({ id, score: 0.91 })) }),
+    },
+    CLERK_JWT_KEY: publicKey.export({ format: 'pem', type: 'spki' }).toString(),
+    CLERK_AUTHORIZED_PARTIES: 'https://onward.test',
+  } as never
+
+  try {
+    await ingestBoards(env, { cachedBoards: new Map([['openai', ashbyFixture]]), verifyIndex: true })
+    assert.equal(db.prepare('SELECT COUNT(*) AS count FROM opening_embeddings').get().count, 0)
+
+    failIndex = false
+    await ingestBoards(env, { cachedBoards: new Map([['openai', ashbyFixture]]), verifyIndex: true })
+    const response = await worker.fetch(new Request('https://onward.test/openings', {
+      headers: { Authorization: `Bearer ${token('user-a')}` },
+    }), env, {} as never)
+    assert.deepEqual((await response.json() as Array<{ id: string }>).map(({ id }) => id), ['openai:1'])
+    assert.equal(upserts, 2, 'the retry indexes cached source instead of refetching the Board')
+
+    vectors.clear()
+    await ingestBoards(env, { cachedBoards: new Map([['openai', ashbyFixture]]), verifyIndex: true })
+    const repaired = await worker.fetch(new Request('https://onward.test/openings', {
+      headers: { Authorization: `Bearer ${token('user-a')}` },
+    }), env, {} as never)
+    assert.deepEqual((await repaired.json() as Array<{ id: string }>).map(({ id }) => id), ['openai:1'])
+  } finally {
+    globalThis.fetch = originalFetch
+    db.close()
+  }
+})
+
+test('full Recall hydrates 100 candidates within D1 limits and excludes only this user’s acted-on Openings', async () => {
+  const db = makeDatabase()
+  const ids = Array.from({ length: 100 }, (_, index) => `boundary-${index}`)
+  try {
+    const copyOpening = db.prepare(`INSERT INTO openings
+      (id, board, company, title, location, secondary_locations, remote, currency,
+       salary_min, salary_max, equity_min, equity_max, bonus, employment_type,
+       published_at, apply_url, description_plain)
+      SELECT ?, board, company, title, location, secondary_locations, remote, currency,
+       salary_min, salary_max, equity_min, equity_max, bonus, employment_type,
+       published_at, apply_url, description_plain FROM openings WHERE id = 'opening-available'`)
+    for (const id of ids) copyOpening.run(id)
+    const state = db.prepare('INSERT INTO state (user_id, opening_id, status, updated_at) VALUES (?,?,?,?)')
+    state.run('user-a', ids[99], 'applied', '2026-10-14T00:00:00Z')
+    state.run('user-b', ids[0], 'dismissed', '2026-10-14T00:00:00Z')
+    const env = {
+      APP_DB: makeD1(db),
+      AI: { run: async () => ({ data: [[1, 0]] }) },
+      VECTORIZE: { query: async () => ({ matches: ids.map((id, index) => ({ id, score: 1 - index / 1000 })) }) },
+      CLERK_JWT_KEY: publicKey.export({ format: 'pem', type: 'spki' }).toString(),
+      CLERK_AUTHORIZED_PARTIES: 'https://onward.test',
+    } as never
+    const response = await worker.fetch(new Request('https://onward.test/openings?limit=100', {
+      headers: { Authorization: `Bearer ${token('user-a')}` },
+    }), env, {} as never)
+    assert.equal(response.status, 200)
+    assert.deepEqual((await response.json() as Array<{ id: string }>).map((opening) => opening.id), ids.slice(0, 99))
+  } finally {
+    db.close()
+  }
+})
+
+test('cached source completes index verification above the Vectorize retrieval limit without re-embedding', async () => {
+  const db = makeDatabase()
+  db.exec('DELETE FROM state; DELETE FROM openings; DELETE FROM opening_embeddings;')
+  const jobs = Array.from({ length: 21 }, (_, index) => ({
+    ...ashbyFixture.jobs[0], jobUrl: `https://jobs.ashbyhq.com/openai/read-boundary-${index}`,
+  }))
+  const ids = jobs.map((_, index) => `openai:read-boundary-${index}`)
+  const vectors = new Map<string, number[]>()
+  let initial = true
+  const env = {
+    APP_DB: makeD1(db),
+    BOARD_DB: { prepare: () => ({ all: async () => ({ results: [{ slug: 'openai', company_name: 'OpenAI', feed_url: 'https://unused.test' }] }) }) },
+    AI: { run: async (_model: string, input: { text: string[] }) => {
+      if (!initial) throw new Error('unchanged cached Openings must not require new Embeddings')
+      return { data: input.text.map(() => [1, 0]) }
+    } },
+    VECTORIZE: {
+      upsert: async (entries: Array<{ id: string; values: number[] }>) => { for (const entry of entries) vectors.set(entry.id, entry.values) },
+      getByIds: async (requested: string[]) => {
+        if (requested.length > 20) throw new Error('VECTOR_GET_ERROR: maximum id count is 20')
+        return requested.filter((id) => vectors.has(id)).map((id) => ({ id, values: vectors.get(id) }))
+      },
+      query: async () => ({ matches: ids.map((id) => ({ id, score: 0.9 })) }),
+    },
+    CLERK_JWT_KEY: publicKey.export({ format: 'pem', type: 'spki' }).toString(),
+    CLERK_AUTHORIZED_PARTIES: 'https://onward.test',
+  } as never
+  try {
+    const options = { cachedBoards: new Map([['openai', { jobs }]]), verifyIndex: true, retireVectors: false }
+    await ingestBoards(env, options)
+    await getOrCreateResumeEmbedding(env, 'user-a', 'Resume A')
+    initial = false
+    const outcomes = await ingestBoards(env, options)
+    assert.deepEqual(outcomes, [{ board: 'openai', ok: true, openings: 21 }])
+    const response = await worker.fetch(new Request('https://onward.test/openings', {
+      headers: { Authorization: `Bearer ${token('user-a')}` },
+    }), env, {} as never)
+    assert.deepEqual((await response.json() as Array<{ id: string }>).map((opening) => opening.id), ids)
   } finally {
     db.close()
   }

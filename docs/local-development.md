@@ -8,7 +8,7 @@ From the repository root:
 ./dev.sh
 ```
 
-The launcher resolves development configuration, applies pending migrations to **local D1 only**, seeds the local Board registry and creates a missing demo Profile from the private Resume, then starts the local Worker and Next.js app together. Historical migrations are adopted from the existing schema rather than repeatedly rebuilding tables. Press `Ctrl-C` to stop both processes.
+The launcher resolves development configuration, applies pending migrations to **local D1 only**, creates a missing demo Profile from the private Resume, and imports/indexes live Openings from the Board registry before starting the local Worker and Next.js app. Historical migrations are adopted from the existing schema rather than repeatedly rebuilding tables. Press `Ctrl-C` to stop both processes.
 
 - Dashboard: `http://localhost:3000`
 - Worker API: `http://127.0.0.1:8787`
@@ -16,7 +16,7 @@ The launcher resolves development configuration, applies pending migrations to *
 - Workers AI: remote Cloudflare binding
 - Vectorize: remote `openings-dev` development index; deployed production keeps `openings`
 
-Remote Workers AI and Vectorize operations use Cloudflare resources and may consume account quota or incur charges. Local D1 and Queues do not write to their deployed resources. Board ingestion still fetches the configured Ashby feeds over the network.
+Remote Workers AI and Vectorize operations use Cloudflare resources and may consume account quota or incur charges. Local D1 does not write to deployed D1. First-time Board ingestion fetches the configured Ashby feeds; later startup reuses the worktree-local source cache and checks its real index entries.
 
 ## Authentication
 
@@ -53,4 +53,16 @@ Startup stores an explicit local bootstrap owner mapping and preserves an existi
 
 Use `./dev.sh profile` for schema and Profile bootstrap without starting servers. `seed/.local/` and root/app environment files are ignored. Keep the primary Resume input ignored in older branches too; the shared Git exclusion can cover it until their ignore rules are updated. Do not copy or link D1 databases between worktrees.
 
-Opening ingestion and demo State are separate bootstrap stages; they require actual Opening records and development Vectorize data. Local D1 is intentional—do not point the local Worker at production D1.
+### Live Opening source and index
+
+First startup fetches the registered live Ashby Boards and atomically writes their raw sources to ignored `seed/.local/openings.json` before normalization or embedding. A valid Board may currently have no Openings. An empty/malformed cache file is not valid input; failed Board fetches are reported and successfully cached sources remain available for another run.
+
+The existing ingestion pipeline writes normalized Openings to local D1 and upserts real description Embeddings into `openings-dev`. Description hashes are saved only after a successful upsert. Vectorize upserts are asynchronous; their query visibility can lag acceptance by a few seconds. Unchanged rows/vectors are reused, missing index IDs are repaired, and completed startup does not refetch cached Board sources. Initialization never clears the shared development index.
+
+Warm startup uses the installed Wrangler CLI's paginated, read-only vector-ID inventory to check missing IDs without downloading every vector's values. The shared ingestion API can also verify through the binding in batches of at most 20 IDs; its normal manual-ingestion behavior is unchanged. Real model/index writes happen only for missing or changed descriptions.
+
+Run `node --experimental-strip-types scripts/development-bootstrap.mjs` to complete schema, Profile, and live Opening bootstrap without starting servers. Native TypeScript stripping was exercised with Node 25.9.0. Shared ingestion imports use explicit TypeScript extensions so this command does not depend on the test runner's loader.
+
+An existing Profile keeps its filters. A populated index can still return no recommendations if those filters reject its top-100 Recall; startup does not silently relax them. Fresh demo Profiles use the checking defaults above. Recommendation hydration batches Opening IDs within D1's parameter limit while retaining the requested API limit.
+
+Local D1 and each source cache are worktree-owned; AI and `openings-dev` are remote/shared. Do not copy D1 databases between worktrees or point local startup at production D1. Demo State is a separate stage built on these real Opening records.

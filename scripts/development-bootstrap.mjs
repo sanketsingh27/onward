@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process'
-import { existsSync, lstatSync, mkdirSync, readFileSync, symlinkSync } from 'node:fs'
+import { existsSync, lstatSync, mkdirSync, readFileSync, renameSync, symlinkSync, writeFileSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { getPlatformProxy, unstable_splitSqlQuery } from '../worker/node_modules/wrangler/wrangler-dist/cli.js'
@@ -215,6 +215,126 @@ async function bootstrapProfile(root) {
   }
 }
 
+function isOpeningSource(source) {
+  return source && typeof source === 'object' && Array.isArray(source.jobs)
+}
+
+function readOpeningCache(root) {
+  const path = join(root, 'seed', '.local', 'openings.json')
+  if (!existsSync(path)) return new Map()
+  let parsed
+  try {
+    parsed = JSON.parse(readFileSync(path, 'utf8'))
+  } catch {
+    throw new Error('Opening bootstrap input stage failed: seed/.local/openings.json is malformed.')
+  }
+  if (!parsed || typeof parsed !== 'object' || !parsed.boards || typeof parsed.boards !== 'object' || Array.isArray(parsed.boards)) {
+    throw new Error('Opening bootstrap input stage failed: seed/.local/openings.json has no Board sources.')
+  }
+  const entries = Object.entries(parsed.boards)
+  if (entries.length === 0 || entries.some(([, source]) => !isOpeningSource(source))) {
+    throw new Error('Opening bootstrap input stage failed: seed/.local/openings.json contains an empty or invalid Board source.')
+  }
+  return new Map(entries)
+}
+
+function writeOpeningCache(root, sources) {
+  const path = join(root, 'seed', '.local', 'openings.json')
+  mkdirSync(dirname(path), { recursive: true })
+  const temporaryPath = `${path}.${process.pid}.tmp`
+  writeFileSync(temporaryPath, `${JSON.stringify({ version: 1, boards: Object.fromEntries(sources) }, null, 2)}\n`, { mode: 0o600 })
+  renameSync(temporaryPath, path)
+}
+
+function indexedOpeningIds(workerDirectory) {
+  // The binding returns full vectors and caps getByIds at 20. The read-only
+  // inventory API pages IDs only, avoiding thousands of floats on warm startup.
+  const ids = new Set()
+  let cursor
+  do {
+    const args = ['vectorize', 'list-vectors', 'openings-dev', '--env', 'development', '--count', '1000', '--json']
+    if (cursor) args.push(`--cursor=${cursor}`)
+    const output = execFileSync(join(workerDirectory, 'node_modules', '.bin', 'wrangler'), args, {
+      cwd: workerDirectory, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'],
+    })
+    const page = JSON.parse(output)
+    if (!Array.isArray(page.vectors)) throw new Error('Opening bootstrap index stage failed: invalid Vectorize ID inventory.')
+    for (const vector of page.vectors) ids.add(vector.id)
+    cursor = page.isTruncated ? page.nextCursor : undefined
+    if (page.isTruncated && !cursor) throw new Error('Opening bootstrap index stage failed: truncated inventory has no continuation cursor.')
+  } while (cursor)
+  return ids
+}
+
+
+async function bootstrapOpenings(root) {
+  const workerDirectory = join(root, 'worker')
+  const localPlatform = await getPlatformProxy({
+    configPath: join(workerDirectory, 'wrangler.jsonc'), environment: 'development',
+    persist: { path: join(workerDirectory, '.wrangler', 'state', 'v3') }, remoteBindings: false,
+  })
+  try {
+    const { fetchBoard } = await import('../worker/src/ingest/fetch.ts')
+    const { ingestBoards } = await import('../worker/src/ingest/ingest.ts')
+    const sources = readOpeningCache(root)
+    const { results: boards } = await localPlatform.env.BOARD_DB.prepare(
+      'SELECT slug, feed_url FROM boards',
+    ).all()
+    const sourceErrors = []
+    for (const board of boards) {
+      if (sources.has(board.slug)) continue
+      try {
+        const source = await fetchBoard(board.feed_url)
+        if (!isOpeningSource(source)) throw new Error('Ashby returned an invalid Opening source')
+        sources.set(board.slug, source)
+        writeOpeningCache(root, sources)
+      } catch (error) {
+        sourceErrors.push({ board: board.slug, ok: false, openings: 0, error: error instanceof Error ? error.message : String(error) })
+      }
+    }
+    if (sources.size === 0) {
+      throw new Error(`Opening bootstrap source stage failed: ${sourceErrors.map((outcome) => `${outcome.board}: ${outcome.error}`).join('; ') || 'no registered Board sources were available'}.`)
+    }
+
+    const hasCachedEmbeddings = await localPlatform.env.APP_DB.prepare('SELECT opening_id FROM opening_embeddings LIMIT 1').first()
+    const indexedIds = hasCachedEmbeddings ? indexedOpeningIds(workerDirectory) : undefined
+
+    let remotePlatform
+    let remotePromise
+    const remote = () => {
+      // Board ingestion is concurrent; share one in-flight remote connection.
+      remotePromise ??= getPlatformProxy({
+        configPath: join(workerDirectory, 'wrangler.jsonc'), environment: 'development',
+        persist: { path: join(workerDirectory, '.wrangler', 'state', 'v3') }, remoteBindings: true,
+      }).then((platform) => {
+        remotePlatform = platform
+        return platform.env
+      })
+      return remotePromise
+    }
+    try {
+      const outcomes = await ingestBoards({
+        APP_DB: localPlatform.env.APP_DB,
+        BOARD_DB: localPlatform.env.BOARD_DB,
+        AI: { run: async (...args) => (await remote()).AI.run(...args) },
+        VECTORIZE: {
+          upsert: async (...args) => (await remote()).VECTORIZE.upsert(...args),
+          deleteByIds: async (...args) => (await remote()).VECTORIZE.deleteByIds(...args),
+          getByIds: async (...args) => (await remote()).VECTORIZE.getByIds(...args),
+        },
+      }, { cachedBoards: sources, sourceOnly: true, retireVectors: false, verifyIndex: true, indexedIds })
+      const failed = [...sourceErrors, ...outcomes.filter((outcome) => !outcome.ok)]
+      if (failed.length > 0) {
+        throw new Error(`Opening bootstrap remains incomplete: ${failed.map((outcome) => `${outcome.board}: ${outcome.error ?? 'index failed'}`).join('; ')}`)
+      }
+    } finally {
+      await remotePlatform?.dispose()
+    }
+  } finally {
+    await localPlatform.dispose()
+  }
+}
+
 async function main() {
   const { root, stage } = parseArguments(process.argv.slice(2))
   if (!existsSync(join(root, 'worker', 'wrangler.jsonc'))) {
@@ -226,7 +346,12 @@ async function main() {
     return
   }
   await bootstrapProfile(root)
-  console.log('Local development Profile bootstrap is ready.')
+  if (stage === 'profile') {
+    console.log('Local development Profile bootstrap is ready.')
+    return
+  }
+  await bootstrapOpenings(root)
+  console.log('Local development bootstrap is ready.')
 }
 
 main().catch((error) => {

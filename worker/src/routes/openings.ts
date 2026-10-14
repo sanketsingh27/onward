@@ -7,6 +7,8 @@ import { queryVector } from '../vector/vector'
 
 const DEFAULT_LIMIT = 50
 const MAX_LIMIT = 100
+// D1 allows 100 bound parameters; reserve one slot for the authenticated owner.
+const OPENINGS_PER_QUERY = 99
 
 export const openingsRoutes = new Hono<ApiEnv>()
 
@@ -29,18 +31,23 @@ openingsRoutes.get('/openings', async (c) => {
   if (matches.length === 0) return c.json([])
 
   const ids = matches.map((match) => match.id)
-  const placeholders = ids.map(() => '?').join(',')
-  const { results } = await c.env.APP_DB.prepare(
-    `SELECT o.id, o.board, o.company, o.title, o.location, o.secondary_locations, o.remote,
-       o.currency, o.salary_min, o.salary_max, o.equity_min, o.equity_max, o.bonus,
-       o.employment_type, o.published_at, o.apply_url, o.description_plain
-     FROM openings o
-     WHERE o.id IN (${placeholders})
-       AND NOT EXISTS (
-         SELECT 1 FROM state s
-         WHERE s.user_id = ? AND s.opening_id = o.id AND s.status IN ('applied', 'dismissed')
-       )`,
-  ).bind(...ids, userId).all<OpeningRow>()
+  const results: OpeningRow[] = []
+  for (let start = 0; start < ids.length; start += OPENINGS_PER_QUERY) {
+    const batchIds = ids.length > OPENINGS_PER_QUERY ? ids.slice(start, start + OPENINGS_PER_QUERY) : ids
+    const placeholders = batchIds.map(() => '?').join(',')
+    const { results: rows } = await c.env.APP_DB.prepare(
+      `SELECT o.id, o.board, o.company, o.title, o.location, o.secondary_locations, o.remote,
+         o.currency, o.salary_min, o.salary_max, o.equity_min, o.equity_max, o.bonus,
+         o.employment_type, o.published_at, o.apply_url, o.description_plain
+       FROM openings o
+       WHERE o.id IN (${placeholders})
+         AND NOT EXISTS (
+           SELECT 1 FROM state s
+           WHERE s.user_id = ? AND s.opening_id = o.id AND s.status IN ('applied', 'dismissed')
+         )`,
+    ).bind(...batchIds, userId).all<OpeningRow>()
+    results.push(...rows)
+  }
 
   const survivors = new Map(
     hardFilter(results.map((row) => fromRow(row)), JSON.parse(profileRow.filters) as Profile)
