@@ -8,7 +8,7 @@ From the repository root:
 ./dev.sh
 ```
 
-The launcher resolves development configuration, applies pending migrations to **local D1 only**, creates a missing demo Profile from the private Resume, and imports/indexes live Openings from the Board registry before starting the local Worker and Next.js app. Historical migrations are adopted from the existing schema rather than repeatedly rebuilding tables. Press `Ctrl-C` to stop both processes.
+The launcher resolves development configuration, applies pending migrations to **local D1 only**, creates a missing demo Profile from the private Resume, imports/indexes live Openings, and seeds initial demo State before starting the local Worker and Next.js app. Historical migrations are adopted from the existing schema rather than repeatedly rebuilding tables. Press `Ctrl-C` to stop both processes.
 
 - Dashboard: `http://localhost:3000`
 - Worker API: `http://127.0.0.1:8787`
@@ -17,6 +17,8 @@ The launcher resolves development configuration, applies pending migrations to *
 - Vectorize: remote `openings-dev` development index; deployed production keeps `openings`
 
 Remote Workers AI and Vectorize operations use Cloudflare resources and may consume account quota or incur charges. Local D1 does not write to deployed D1. First-time Board ingestion fetches the configured Ashby feeds; later startup reuses the worktree-local source cache and checks its real index entries.
+
+The default launcher uses Wrangler's normal log level. Low-level `npm run dev:logs` is an explicit diagnostic command in `worker/`; its debug output can contain transient proxy secrets and must not be shared.
 
 ## Authentication
 
@@ -61,8 +63,22 @@ The existing ingestion pipeline writes normalized Openings to local D1 and upser
 
 Warm startup uses the installed Wrangler CLI's paginated, read-only vector-ID inventory to check missing IDs without downloading every vector's values. The shared ingestion API can also verify through the binding in batches of at most 20 IDs; its normal manual-ingestion behavior is unchanged. Real model/index writes happen only for missing or changed descriptions.
 
-Run `node --experimental-strip-types scripts/development-bootstrap.mjs` to complete schema, Profile, and live Opening bootstrap without starting servers. Native TypeScript stripping was exercised with Node 25.9.0. Shared ingestion imports use explicit TypeScript extensions so this command does not depend on the test runner's loader.
+Run `./dev.sh seed` to complete all data stages without starting servers (`node --experimental-strip-types scripts/development-bootstrap.mjs` is equivalent). Native TypeScript stripping was exercised with Node 25.9.0. Shared ingestion imports use explicit TypeScript extensions so this command does not depend on the test runner's loader.
 
 An existing Profile keeps its filters. A populated index can still return no recommendations if those filters reject its top-100 Recall; startup does not silently relax them. Fresh demo Profiles use the checking defaults above. Recommendation hydration batches Opening IDs within D1's parameter limit while retaining the requested API limit.
 
-Local D1 and each source cache are worktree-owned; AI and `openings-dev` are remote/shared. Do not copy D1 databases between worktrees or point local startup at production D1. Demo State is a separate stage built on these real Opening records.
+Local D1 and each source cache are worktree-owned; AI and `openings-dev` are remote/shared. Do not copy D1 databases between worktrees or point local startup at production D1.
+
+### Initial demo State and readiness
+
+First complete setup populates the seven current domain tables: `boards`, `users`, `profile`, `openings`, `state`, `resume_embeddings`, and `opening_embeddings`. Opening vectors live in Vectorize; `opening_embeddings` stores their description hashes. Removed scans, legacy vectors, and persisted Fit tables are not recreated.
+
+Initial `saved`, `applied`, and `dismissed` examples use the resolved account and real imported Opening IDs. The saved example comes from actual Recall, and at least one unacted Recall Survivor remains for the Available tab. Applied/dismissed records are **demo checking data**, not employer submissions; bootstrap never submits an Application.
+
+State inserts and `development_bootstrap_state` completion are one D1 transaction. A failed write rolls back both and can be retried. The completed marker is independent of current row count: changing a status, removing a decision, or emptying State later does not reseed examples. Existing Profile edits and filters remain saved; a changed Resume requires its own new real Embedding, while unchanged Opening derivations are reused.
+
+Readiness follows schema/Board setup, verified owner and saved Profile/Resume hash, successful Board import/hash/index work, then initial State completion. Framework bookkeeping is not seed data. A required configuration, account, feed, model, index, or ownership failure prints a stage diagnostic and exits **1** before starting servers; retained source inputs and successful stages remain available.
+
+If initial State cannot retain both saved and unacted actual Recall Survivors with the saved filters/live data, no examples or completion marker are written. `./dev.sh seed` exits **2** and reports incomplete setup. `./dev.sh` reports the same limitation but starts the application so preferences can be edited; it does not print complete readiness. Edit preferences, then rerun `./dev.sh seed`. Do not reset filters merely to make a seed check pass.
+
+Workers AI error **4006** means the daily free allocation is exhausted. Do not substitute fake vectors or bypass the failed stage. Wait for quota reset or explicitly arrange paid allocation, then rerun; already accepted real derivations remain reusable. Shared Vectorize IDs can become query-visible shortly after an upsert, so an initial Recall limitation can also resolve on a later run.

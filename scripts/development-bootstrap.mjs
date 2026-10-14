@@ -17,7 +17,7 @@ const appMigrations = [
   '0009_profile_user_ids.sql',
 ]
 const boardMigrations = ['0001_boards.sql']
-const pendingAppMigrations = ['0010_clerk_user_ids.sql']
+const pendingAppMigrations = ['0010_clerk_user_ids.sql', '0011_development_bootstrap_state.sql']
 
 function directoryEntryExists(path) {
   try {
@@ -200,13 +200,46 @@ async function bootstrapProfile(root) {
         })
         return remotePlatform.env.AI.run(...args)
       } }
-      await bootstrapDevelopmentProfile({
+      return await bootstrapDevelopmentProfile({
         env: { APP_DB: localPlatform.env.APP_DB, AI: lazyAI }, resume,
         resolveAccount: (email) => resolveDevelopmentClerkAccount(secretKey, email),
       })
     } catch (error) {
       const message = error instanceof Error ? error.message : 'unknown remote embedding failure'
       throw new Error(`Profile bootstrap embedding stage failed: ${message}`)
+    } finally {
+      await remotePlatform?.dispose()
+    }
+  } finally {
+    await localPlatform.dispose()
+  }
+}
+
+async function bootstrapState(root, userId) {
+  const workerDirectory = join(root, 'worker')
+  const localPlatform = await getPlatformProxy({
+    configPath: join(workerDirectory, 'wrangler.jsonc'), environment: 'development',
+    persist: { path: join(workerDirectory, '.wrangler', 'state', 'v3') }, remoteBindings: false,
+  })
+  try {
+    const { bootstrapDevelopmentState } = await import('./development-state-bootstrap.ts')
+    let remotePlatform
+    try {
+      const remote = async () => {
+        remotePlatform ??= await getPlatformProxy({
+          configPath: join(workerDirectory, 'wrangler.jsonc'), environment: 'development',
+          persist: { path: join(workerDirectory, '.wrangler', 'state', 'v3') }, remoteBindings: true,
+        })
+        return remotePlatform.env
+      }
+      return await bootstrapDevelopmentState({
+        env: {
+          APP_DB: localPlatform.env.APP_DB,
+          AI: { run: async (...args) => (await remote()).AI.run(...args) },
+          VECTORIZE: { query: async (...args) => (await remote()).VECTORIZE.query(...args) },
+        },
+        userId,
+      })
     } finally {
       await remotePlatform?.dispose()
     }
@@ -345,12 +378,18 @@ async function main() {
     console.log('Local development schema is ready.')
     return
   }
-  await bootstrapProfile(root)
+  const { userId } = await bootstrapProfile(root)
   if (stage === 'profile') {
     console.log('Local development Profile bootstrap is ready.')
     return
   }
   await bootstrapOpenings(root)
+  const state = await bootstrapState(root, userId)
+  if (!state.complete) {
+    console.error(`Initial demo State remains incomplete: ${state.reason}. Edit the saved Profile filters, then rerun ./dev.sh.`)
+    process.exitCode = 2
+    return
+  }
   console.log('Local development bootstrap is ready.')
 }
 

@@ -15,6 +15,10 @@ if [[ "${1:-}" == "profile" ]]; then
   exec node --experimental-strip-types "$ROOT_DIR/scripts/development-bootstrap.mjs" --profile
 fi
 
+if [[ "${1:-}" == "seed" ]]; then
+  exec node --experimental-strip-types "$ROOT_DIR/scripts/development-bootstrap.mjs"
+fi
+
 if [[ ! -x "$WRANGLER" || ! -x "$NEXT" ]]; then
   printf 'Install app and Worker dependencies first: npm ci in app/ and worker/\n' >&2
   exit 1
@@ -27,11 +31,17 @@ for port in 3000 8787; do
   fi
 done
 
-node --experimental-strip-types "$ROOT_DIR/scripts/development-bootstrap.mjs"
+if node --experimental-strip-types "$ROOT_DIR/scripts/development-bootstrap.mjs"; then
+  :
+else
+  bootstrap_status=$?
+  if [[ "$bootstrap_status" -ne 2 ]]; then exit "$bootstrap_status"; fi
+  printf 'Starting the application with incomplete demo State. Edit Profile preferences, then rerun ./dev.sh seed.\n' >&2
+fi
 
 run_worker() {
   local status=0
-  (cd "$WORKER_DIR" && npm run dev:logs) || status=$?
+  (cd "$WORKER_DIR" && npm run dev) || status=$?
   printf '%s\n' "$status" > "$status_dir/worker"
 }
 

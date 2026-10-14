@@ -2,7 +2,7 @@ export async function upsertVectors(env: Env, entries: { id: string; values: num
   await env.VECTORIZE.upsert(entries)
 }
 
-export async function queryVector(env: Env, vector: number[], topK: number): Promise<{ id: string; score: number }[]> {
+export async function queryVector(env: { VECTORIZE: Pick<Env['VECTORIZE'], 'query'> }, vector: number[], topK: number): Promise<{ id: string; score: number }[]> {
   const res = await env.VECTORIZE.query(vector, { topK, returnValues: false })
   return res.matches.map((match) => ({ id: match.id, score: match.score }))
 }

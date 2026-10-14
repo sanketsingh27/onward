@@ -10,5 +10,5 @@
     "types": ["node"],
     "typeRoots": ["../app/node_modules/@types"]
   },
-  "files": ["development-profile-bootstrap.ts", "../worker/src/env.d.ts", "../worker/worker-configuration.d.ts"]
+  "files": ["development-profile-bootstrap.ts", "development-state-bootstrap.ts", "../worker/src/env.d.ts", "../worker/worker-configuration.d.ts"]
 }

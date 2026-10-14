@@ -32,7 +32,7 @@ state    { id INTEGER PK, user_id TEXT, opening_id TEXT, status TEXT, updated_at
          -- status ∈ saved | applied | dismissed
 ```
 
-Profile, Resume Embedding, and State ownership use the same verified opaque Clerk subject. Filters and cached vectors are JSON text. Local schema-history and demo-owner mapping tables are development bookkeeping, not domain seed targets or public API data.
+Profile, Resume Embedding, and State ownership use the same verified opaque Clerk subject. Filters and cached vectors are JSON text. Local schema-history, demo-owner mapping, and initial-State completion tables are development bookkeeping, not domain seed targets or public API data. Initial State and its completion marker commit atomically; later startup preserves intentionally changed or removed decisions independently of current State row count.
 
 ## Opening type (TS)
 
