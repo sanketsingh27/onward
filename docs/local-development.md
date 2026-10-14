@@ -8,7 +8,7 @@ From the repository root:
 ./dev.sh
 ```
 
-The launcher resolves development configuration, applies pending migrations to **local D1 only**, seeds the local Board registry, then starts the local Worker and Next.js app together. Historical migrations are adopted from the existing schema rather than repeatedly rebuilding tables. Press `Ctrl-C` to stop both processes.
+The launcher resolves development configuration, applies pending migrations to **local D1 only**, seeds the local Board registry and creates a missing demo Profile from the private Resume, then starts the local Worker and Next.js app together. Historical migrations are adopted from the existing schema rather than repeatedly rebuilding tables. Press `Ctrl-C` to stop both processes.
 
 - Dashboard: `http://localhost:3000`
 - Worker API: `http://127.0.0.1:8787`
@@ -30,7 +30,7 @@ Remote Workers AI and Vectorize operations use Cloudflare resources and may cons
 1. Install dependencies: run `npm ci` in both `app/` and `worker/`.
 2. Log in to Cloudflare with Wrangler (`cd worker && npx wrangler login`). Local mode uses remote Workers AI and the dedicated development Vectorize index.
 3. Create `worker/.dev.vars.development` (or reuse it from the primary worktree). Set `CLERK_JWT_KEY` from the Clerk Dashboard and set `CLERK_AUTHORIZED_PARTIES` to the local app origin used in the browser, normally `http://localhost:3000`.
-4. Ensure `app/.env.local` has the Clerk frontend keys for the same Clerk instance.
+4. Ensure `app/.env.local` has the Clerk frontend keys and server-side `CLERK_SECRET_KEY` for the same development Clerk instance. The secret is read only by the local bootstrap and is never exposed to browser code.
 
 `.dev.vars.development` is ignored by Git. Never commit its real key values. Startup requires the frontend and backend development configuration to be present locally or available from the primary worktree.
 
@@ -45,4 +45,12 @@ Run `./dev.sh schema` to resolve configuration and apply local schema/Board setu
 
 ## Local data
 
-The launcher initializes schema and board registry data in local Wrangler D1 storage. It does not seed a resume/profile or opening records. After signing in, the dashboard shows the profile form; saving it writes your resume and preferences under the authenticated Clerk user ID. Running a scan still requires opening records in local D1. Do not point the local Worker at production D1; local D1 is intentional.
+Place the complete Resume in ignored `seed/.local/resume.md` once. Startup reads a worktree-local file first, otherwise the primary worktree's file. The contact header must contain the job-seeker's name and one email address; the existing development Clerk account is resolved by that email without creating another account.
+
+Missing local user/Profile records are created under the verified Clerk ID. The initial filters are remote-only, no location restriction, zero compensation floors, full-time, Senior+, and no exclusions. These are demo filters, not requirements inferred from the Resume.
+
+Startup stores an explicit local bootstrap owner mapping and preserves an existing saved Profile even when the source Resume changes. Resume Embeddings follow the exact text in the saved Profile: unchanged content reuses its real cached vector; a changed saved Resume is embedded using the remote development Workers AI binding. Missing input, ambiguous account lookup, or embedding failure leaves setup incomplete with a stage diagnostic.
+
+Use `./dev.sh profile` for schema and Profile bootstrap without starting servers. `seed/.local/` and root/app environment files are ignored. Keep the primary Resume input ignored in older branches too; the shared Git exclusion can cover it until their ignore rules are updated. Do not copy or link D1 databases between worktrees.
+
+Opening ingestion and demo State are separate bootstrap stages; they require actual Opening records and development Vectorize data. Local D1 is intentional—do not point the local Worker at production D1.

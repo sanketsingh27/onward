@@ -5,3 +5,6 @@ dist/
 *.tsbuildinfo
 .dev.vars*
 !.dev.vars.development.example
+/.env.local
+/app/.env.local
+/seed/.local/

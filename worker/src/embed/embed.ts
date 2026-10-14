@@ -1,7 +1,12 @@
 
 const EMBED_MODEL = '@cf/baai/bge-base-en-v1.5'
 
-export async function embedTexts(ai: Ai, texts: string[]): Promise<number[][]> {
+type ResumeEmbeddingEnvironment = {
+  APP_DB: Pick<D1Database, 'prepare'>
+  AI: Pick<Ai, 'run'>
+}
+
+export async function embedTexts(ai: Pick<Ai, 'run'>, texts: string[]): Promise<number[][]> {
   const res = await ai.run(EMBED_MODEL, { text: texts })
   // Workers AI embedding models return { data: number[][] }.
   const output = res as { data: number[][] }
@@ -9,7 +14,7 @@ export async function embedTexts(ai: Ai, texts: string[]): Promise<number[][]> {
 }
 
 
-export async function getOrCreateResumeEmbedding(env: Env, userId: string, resume: string): Promise<number[]> {
+export async function getOrCreateResumeEmbedding(env: ResumeEmbeddingEnvironment, userId: string, resume: string): Promise<number[]> {
   const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(resume))
   const resumeHash = Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, '0')).join('')
   const row = await env.APP_DB.prepare(

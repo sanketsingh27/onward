@@ -29,9 +29,20 @@ function directoryEntryExists(path) {
 }
 
 function parseArguments(args) {
-  if (args.length === 0) return { root: defaultRoot }
-  if (args.length === 2 && args[0] === '--root') return { root: resolve(args[1]) }
-  throw new Error('Usage: node scripts/development-bootstrap.mjs [--root <worktree>]')
+  let root = defaultRoot
+  let stage = 'full'
+  for (let index = 0; index < args.length; index += 1) {
+    if (args[index] === '--root' && args[index + 1]) {
+      root = resolve(args[++index])
+    } else if (args[index] === '--schema') {
+      stage = 'schema'
+    } else if (args[index] === '--profile') {
+      stage = 'profile'
+    } else {
+      throw new Error('Usage: node scripts/development-bootstrap.mjs [--schema|--profile] [--root <worktree>]')
+    }
+  }
+  return { root, stage }
 }
 
 function primaryWorktree(root) {
@@ -153,13 +164,69 @@ async function bootstrapSchema(root) {
   }
 }
 
+function privateResumePath(root) {
+  const local = join(root, 'seed', '.local', 'resume.md')
+  return existsSync(local) ? local : join(primaryWorktree(root), 'seed', '.local', 'resume.md')
+}
+
+function environmentValue(path, name) {
+  if (!existsSync(path)) return undefined
+  const line = readFileSync(path, 'utf8').split(/\r?\n/).find((value) => value.startsWith(`${name}=`))
+  if (!line) return undefined
+  const value = line.slice(name.length + 1).trim()
+  return value.replace(/^(['"])(.*)\1$/, '$2') || undefined
+}
+
+async function bootstrapProfile(root) {
+  const resumePath = privateResumePath(root)
+  if (!existsSync(resumePath)) {
+    throw new Error('Profile bootstrap input stage failed: seed/.local/resume.md is missing in this or the primary worktree.')
+  }
+  const resume = readFileSync(resumePath, 'utf8')
+  const workerDirectory = join(root, 'worker')
+  const localPlatform = await getPlatformProxy({
+    configPath: join(workerDirectory, 'wrangler.jsonc'), environment: 'development',
+    persist: { path: join(workerDirectory, '.wrangler', 'state', 'v3') }, remoteBindings: false,
+  })
+  try {
+    const { bootstrapDevelopmentProfile, resolveDevelopmentClerkAccount } = await import('./development-profile-bootstrap.ts')
+    const secretKey = environmentValue(join(root, 'app', '.env.local'), 'CLERK_SECRET_KEY')
+    let remotePlatform
+    try {
+      const lazyAI = { async run(...args) {
+        remotePlatform ??= await getPlatformProxy({
+          configPath: join(workerDirectory, 'wrangler.jsonc'), environment: 'development',
+          persist: { path: join(workerDirectory, '.wrangler', 'state', 'v3') }, remoteBindings: true,
+        })
+        return remotePlatform.env.AI.run(...args)
+      } }
+      await bootstrapDevelopmentProfile({
+        env: { APP_DB: localPlatform.env.APP_DB, AI: lazyAI }, resume,
+        resolveAccount: (email) => resolveDevelopmentClerkAccount(secretKey, email),
+      })
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'unknown remote embedding failure'
+      throw new Error(`Profile bootstrap embedding stage failed: ${message}`)
+    } finally {
+      await remotePlatform?.dispose()
+    }
+  } finally {
+    await localPlatform.dispose()
+  }
+}
+
 async function main() {
-  const { root } = parseArguments(process.argv.slice(2))
+  const { root, stage } = parseArguments(process.argv.slice(2))
   if (!existsSync(join(root, 'worker', 'wrangler.jsonc'))) {
     throw new Error(`Worker configuration is missing at ${join(root, 'worker', 'wrangler.jsonc')}.`)
   }
   await bootstrapSchema(root)
-  console.log('Local development schema is ready.')
+  if (stage === 'schema') {
+    console.log('Local development schema is ready.')
+    return
+  }
+  await bootstrapProfile(root)
+  console.log('Local development Profile bootstrap is ready.')
 }
 
 main().catch((error) => {

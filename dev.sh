@@ -8,7 +8,11 @@ WRANGLER="$WORKER_DIR/node_modules/.bin/wrangler"
 NEXT="$APP_DIR/node_modules/.bin/next"
 
 if [[ "${1:-}" == "schema" ]]; then
-  exec node "$ROOT_DIR/scripts/development-bootstrap.mjs"
+  exec node --experimental-strip-types "$ROOT_DIR/scripts/development-bootstrap.mjs" --schema
+fi
+
+if [[ "${1:-}" == "profile" ]]; then
+  exec node --experimental-strip-types "$ROOT_DIR/scripts/development-bootstrap.mjs" --profile
 fi
 
 if [[ ! -x "$WRANGLER" || ! -x "$NEXT" ]]; then
@@ -23,7 +27,7 @@ for port in 3000 8787; do
   fi
 done
 
-node "$ROOT_DIR/scripts/development-bootstrap.mjs"
+node --experimental-strip-types "$ROOT_DIR/scripts/development-bootstrap.mjs"
 
 run_worker() {
   local status=0
