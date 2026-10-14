@@ -80,12 +80,14 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 
 These gates apply across the project, including parallel worktrees. Follow the named skills in order; this workflow adds approval, session, and branch requirements to their processes. Planning produces documentation and issues, not feature implementation.
 
-### Phase 1: Verify the planning model
+**Enter at the applicable phase.** Start at the earliest phase whose prerequisites are not satisfied. Creating tickets from an existing approved spec starts at Phase 4; publishing already approved ticket drafts resumes Phase 4 at publication. Verify existing approvals against the current scope, but do not repeat completed phases merely because this file was reread or a new session started. Missing approval or a material scope change still requires the relevant approval gate.
 
-1. Before planning a feature, report the active model and thinking/reasoning level from session metadata or a read-only status command. If either is not exposed, say it is unverified; do not guess.
-2. Ask the user to verify that these settings are appropriate for planning. Recommend a change only when the feature's complexity or risk warrants it, and explain why.
-3. Model and thinking-level changes are manual: the user changes them through their client. Never change model settings, thinking level, or defaults automatically.
-4. Wait for confirmation before proceeding. After a requested change, recheck the exposed settings; if unavailable, obtain the user's confirmation.
+### Phase 1: Report the planning model (non-blocking)
+
+1. When starting a new feature's planning, report the active model and thinking/reasoning level once from session metadata or a read-only status command. If either is not exposed, say it is unverified; do not guess.
+2. Continue with the current settings without asking for model confirmation. Unavailable model metadata does not block planning or ticket creation. Re-reading this workflow does not restart this reporting step.
+3. If the feature's complexity or risk warrants a different model or reasoning level, explain the recommendation as advisory, not an approval gate.
+4. Model and thinking-level changes remain manual: the user changes them through their client. Never change model settings, thinking level, or defaults automatically. After a user-requested change, recheck exposed settings if available; otherwise report them as unverified and continue.
 
 ### Phase 2: Grill and document
 
